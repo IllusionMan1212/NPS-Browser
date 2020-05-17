@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import com.illusionware.npsbrowser.AppData
 import com.illusionware.npsbrowser.databinding.ActivityMainBinding
 import java.io.InputStream
 
@@ -42,7 +43,32 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
             resultData?.data?.also { uri ->
                 val inputStream: InputStream? = contentResolver.openInputStream(uri)
-                val entries : List<Map<String, String>> = tsvReader.readAllWithHeader(inputStream!!)
+                val entries : List<Map<String, String?>> = tsvReader.readAllWithHeader(inputStream!!)
+                val myIntent = Intent(this, AppsListActivity::class.java)
+                var apps = ArrayList<AppData>(entries.size)
+
+                entries.forEach { entry ->
+                    if (entry["Name"].isNullOrEmpty()) {
+                        return@forEach;
+                    }
+                    val id = entry["Title ID"]
+                    val region = entry["Region"]
+                    val name = entry["Name"]
+                    val link = entry["PKG direct link"]
+                    val license = entry["zRIF"]
+                    val contentID = entry["Content ID"]
+                    val lastDateTime = entry["Last Modification Date"]
+                    val fileSize = entry["File Size"]?.toLongOrNull()
+                    val sha256 = entry["SHA256"]
+                    val minFW = entry["Required FW"]
+                    var app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
+                        contentID ?: "MISSING", lastDateTime ?: "MISSING",
+                        fileSize ?: 0, sha256 ?: "MISSING", minFW ?: "MISSING")
+                    apps.add(app)
+                }
+                apps.sortBy { it.Title }
+                AppsListActivity.apps = apps;
+                startActivity(myIntent)
             }
         }
     }
