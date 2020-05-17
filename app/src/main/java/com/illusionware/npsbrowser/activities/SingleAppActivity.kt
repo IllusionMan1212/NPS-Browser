@@ -3,7 +3,7 @@ package com.illusionware.npsbrowser.activities
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.illusionware.npsbrowser.AppData
-import com.illusionware.npsbrowser.databinding.ActivitySingleGameBinding
+import com.illusionware.npsbrowser.databinding.ActivitySingleAppBinding
 
 class SingleAppActivity: AppCompatActivity() {
     companion object {
@@ -11,7 +11,7 @@ class SingleAppActivity: AppCompatActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivitySingleGameBinding.inflate(layoutInflater);
+        val binding = ActivitySingleAppBinding.inflate(layoutInflater);
         setContentView(binding.root)
 
         binding.titleID.text = app.TitleID
