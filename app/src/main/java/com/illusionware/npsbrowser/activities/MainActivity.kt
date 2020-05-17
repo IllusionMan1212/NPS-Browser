@@ -16,8 +16,10 @@ class MainActivity : AppCompatActivity() {
 
     private val tsvReader = csvReader {
         charset = "UTF-8"
-        quoteChar = '"'
+        quoteChar = '\\'
+        escapeChar = '\\'
         delimiter = '\t'
+        skipEmptyLine = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
