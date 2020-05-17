@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.illusionware.npsbrowser.AppData
@@ -31,6 +30,20 @@ class AppsListActivity : AppCompatActivity() {
         recyclerView.apply {
             layoutManager = LinearLayoutManager(applicationContext)
             adapter = viewAdapter
+
+            recyclerView.addOnItemTouchListener(RecyclerTouchListener(applicationContext, recyclerView, object : RecyclerTouchListener.ClickListener {
+                override fun onClick(view: View?, position: Int) {
+                    val myIntent = Intent(context, SingleAppActivity::class.java)
+                    SingleAppActivity.app = apps[position]
+
+                    startActivity(myIntent)
+                }
+
+                override fun onLongClick(view: View?, recyclerView: RecyclerView?, position: Int) {
+                    Toast.makeText(applicationContext, "TODO: Long Click ", Toast.LENGTH_SHORT).show()
+                }
+            }
+            ))
         }
     }
 }
