@@ -16,7 +16,7 @@ import com.illusionware.npsbrowser.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.appbar.*
 import java.io.InputStream
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
 
     private val tsvReader = csvReader {
         charset = "UTF-8"
@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_settings -> {
+                val settingsIntent = Intent(this, SettingsActivity::class.java)
+                startActivity(settingsIntent)
                 true
             }
             else -> return super.onOptionsItemSelected(item)
@@ -65,7 +67,7 @@ class MainActivity : AppCompatActivity() {
                 val inputStream: InputStream? = contentResolver.openInputStream(uri)
                 val entries : List<Map<String, String?>> = tsvReader.readAllWithHeader(inputStream!!)
                 val myIntent = Intent(this, AppsListActivity::class.java)
-                var apps = ArrayList<AppData>(entries.size)
+                val apps = ArrayList<AppData>(entries.size)
 
                 entries.forEach { entry ->
                     if (entry["Name"].isNullOrEmpty()) {
@@ -81,7 +83,7 @@ class MainActivity : AppCompatActivity() {
                     val fileSize = entry["File Size"]?.toLongOrNull()
                     val sha256 = entry["SHA256"]
                     val minFW = entry["Required FW"]
-                    var app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
+                    val app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
                         contentID ?: "MISSING", lastDateTime ?: "MISSING",
                         fileSize ?: 0, sha256 ?: "MISSING", minFW)
                     apps.add(app)

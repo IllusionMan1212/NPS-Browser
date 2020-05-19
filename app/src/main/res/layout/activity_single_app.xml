@@ -14,7 +14,6 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="48dp"
         android:fontFamily="sans-serif-medium"
-        android:text="gameTitle"
         android:textAlignment="center"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -30,7 +29,6 @@
         android:layout_marginTop="56dp"
         android:layout_marginEnd="48dp"
         android:fontFamily="sans-serif-smallcaps"
-        android:text="titleID"
         android:textAlignment="center"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -53,7 +51,7 @@
             android:layout_marginStart="140dp"
             android:layout_marginTop="30dp"
             android:layout_marginEnd="141dp"
-            android:contentDescription="Game Icon"
+            android:contentDescription="game Icon"
             app:srcCompat="@drawable/ic_games_black_24dp" />
 
     </LinearLayout>
