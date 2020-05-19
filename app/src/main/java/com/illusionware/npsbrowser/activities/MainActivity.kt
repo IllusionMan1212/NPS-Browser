@@ -6,11 +6,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
+import android.view.Menu
+import android.view.MenuItem
 import androidx.core.app.ActivityCompat
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.illusionware.npsbrowser.AppData
+import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.databinding.ActivityMainBinding
+import kotlinx.android.synthetic.main.appbar.*
 import java.io.InputStream
 
 class MainActivity : AppCompatActivity() {
@@ -25,8 +28,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityMainBinding.inflate(layoutInflater);
+        val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        setSupportActionBar(toolbar)
 
         binding.tsvChooserButton.setOnClickListener {
             if (!isStoragePermissionGranted())
@@ -38,6 +43,21 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, 1)
         }
     }
+
+    override fun onCreateOptionsMenu(menu : Menu) : Boolean {
+        menuInflater.inflate(R.menu.toolbar_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
         super.onActivityResult(requestCode, resultCode, resultData)
         if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
@@ -49,7 +69,7 @@ class MainActivity : AppCompatActivity() {
 
                 entries.forEach { entry ->
                     if (entry["Name"].isNullOrEmpty()) {
-                        return@forEach;
+                        return@forEach
                     }
                     val id = entry["Title ID"]
                     val region = entry["Region"]
@@ -63,11 +83,11 @@ class MainActivity : AppCompatActivity() {
                     val minFW = entry["Required FW"]
                     var app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
                         contentID ?: "MISSING", lastDateTime ?: "MISSING",
-                        fileSize ?: 0, sha256 ?: "MISSING", minFW ?: "MISSING")
+                        fileSize ?: 0, sha256 ?: "MISSING", minFW)
                     apps.add(app)
                 }
                 apps.sortBy { it.Title }
-                AppsListActivity.apps = apps;
+                AppsListActivity.apps = apps
                 startActivity(myIntent)
             }
         }

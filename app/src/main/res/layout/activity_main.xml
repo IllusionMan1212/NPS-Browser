@@ -6,6 +6,8 @@
     android:layout_height="match_parent"
     tools:context=".activities.MainActivity">
 
+    <include layout="@layout/appbar" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/tsvChooserButton"
         android:layout_width="52dp"
