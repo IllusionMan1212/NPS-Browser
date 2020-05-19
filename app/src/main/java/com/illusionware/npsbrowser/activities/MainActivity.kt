@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                         fileSize ?: 0, sha256 ?: "MISSING", minFW)
                     apps.add(app)
                 }
-                apps.sortBy { it.Title }
+                apps.sortBy { it.title }
                 AppsListActivity.apps = apps
                 startActivity(myIntent)
             }

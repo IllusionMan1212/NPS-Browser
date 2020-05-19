@@ -21,10 +21,10 @@ class AppsListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityAppsListBinding.inflate(layoutInflater);
+        val binding = ActivityAppsListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        viewAdapter = AppAdapter(apps)
+        viewAdapter = AppAdapter(apps, applicationContext)
 
         recyclerView = binding.appsRecycler
         recyclerView.apply {

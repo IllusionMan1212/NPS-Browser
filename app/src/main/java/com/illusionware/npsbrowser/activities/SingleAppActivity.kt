@@ -11,10 +11,10 @@ class SingleAppActivity: AppCompatActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivitySingleAppBinding.inflate(layoutInflater);
+        val binding = ActivitySingleAppBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.titleID.text = app.TitleID
-        binding.gameTitle.text = app.Title;
+        binding.titleID.text = app.titleID
+        binding.gameTitle.text = app.title
     }
 }

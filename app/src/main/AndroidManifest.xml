@@ -24,6 +24,10 @@
             tools:ignore="LockedOrientationActivity">
         </activity>
         <activity android:name=".activities.AppsListActivity" />
+        <activity
+            android:name=".activities.SingleAppActivity"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity" />
     </application>
 
 </manifest>
