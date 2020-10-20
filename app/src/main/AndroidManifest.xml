@@ -20,15 +20,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".activities.SettingsActivity"
-            android:label="@string/title_activity_settings"
-            android:parentActivityName=".activities.MainActivity"/>
-        <activity android:name=".activities.AppsListActivity" />
+        <activity android:name=".activities.MainActivity"
+            android:configChanges="screenSize|screenLayout|keyboardHidden">
+        </activity>
         <activity
             android:name=".activities.SingleAppActivity"
             android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity" />
+            tools:ignore="LockedOrientationActivity"
+            android:parentActivityName=".activities.MainActivity" />
     </application>
 
 </manifest>

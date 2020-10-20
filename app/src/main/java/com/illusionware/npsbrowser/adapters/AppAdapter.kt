@@ -12,6 +12,9 @@ import com.illusionware.npsbrowser.R
 import kotlin.collections.ArrayList
 
 class AppAdapter(private val appsList: ArrayList<AppData>, val context : Context) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
+    private final val LIST_ITEM = 0
+    private final val GRID_ITEM = 1
+    var isSwitchView = true
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         var appTitle: TextView = view.findViewById(R.id.appTitle)
@@ -21,11 +24,29 @@ class AppAdapter(private val appsList: ArrayList<AppData>, val context : Context
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        return ViewHolder( LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false))
+        return if (viewType == LIST_ITEM) {
+            ViewHolder( LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false))
+        } else {
+            ViewHolder( LayoutInflater.from(parent.context).inflate(R.layout.grid_item, parent, false))
+        }
+    }
+
+    override fun getItemViewType(position: Int): Int {
+        return if (isSwitchView) {
+            LIST_ITEM
+        } else {
+            GRID_ITEM
+        }
+    }
+
+    public fun toggleItemViewType(type: Int): Boolean {
+        isSwitchView = type == 0
+        return isSwitchView
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.appTitle.text =  appsList[position].title
+        holder.appTitle.isSelected = true
         holder.appRegion.text =  appsList[position].region
         holder.appMinFW.text =  appsList[position].minFW
         holder.appMinFW.background = null;

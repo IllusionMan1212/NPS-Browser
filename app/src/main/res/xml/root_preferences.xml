@@ -8,5 +8,12 @@
             android:entryValues="@array/app_theme_val"
             android:key="app_theme"
             android:title="Theme" />
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/layout_type"
+            android:entryValues="@array/layout_type_val"
+            android:key="layout_type"
+            android:title="Layout"
+            app:useSimpleSummaryProvider="true"/>
     </PreferenceCategory>
 </PreferenceScreen>

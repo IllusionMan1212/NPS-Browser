@@ -3,7 +3,6 @@ package com.illusionware.npsbrowser.activities
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import com.illusionware.npsbrowser.activities.mainactivity.MainActivity
 
 class SplashActivity : BaseActivity() {
 

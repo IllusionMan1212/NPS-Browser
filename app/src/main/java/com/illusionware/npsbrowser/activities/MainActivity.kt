@@ -1,108 +1,39 @@
 package com.illusionware.npsbrowser.activities
 
-import android.Manifest
-import android.app.Activity
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
-import android.view.Menu
 import android.view.MenuItem
-import androidx.core.app.ActivityCompat
-import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
-import com.illusionware.npsbrowser.AppData
 import com.illusionware.npsbrowser.R
-import com.illusionware.npsbrowser.databinding.ActivityMainBinding
-import kotlinx.android.synthetic.main.appbar.*
-import java.io.InputStream
+import com.illusionware.npsbrowser.fragments.mainactivity.MainActivityFragment
 
 class MainActivity : BaseActivity() {
 
-    private val tsvReader = csvReader {
-        charset = "UTF-8"
-        quoteChar = '\\'
-        escapeChar = '\\'
-        delimiter = '\t'
-        skipEmptyLine = true
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        setSupportActionBar(toolbar)
-
-        binding.tsvChooserButton.setOnClickListener {
-            if (!isStoragePermissionGranted())
-                return@setOnClickListener
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "text/tab-separated-values"
-            }
-            startActivityForResult(intent, 1)
+        setTheme(R.style.NPSTheme)
+        setContentView(R.layout.activity_main)
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.container, MainActivityFragment.newInstance())
+                .commitNow()
         }
-    }
-
-    override fun onCreateOptionsMenu(menu : Menu) : Boolean {
-        menuInflater.inflate(R.menu.toolbar_main, menu)
-        return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                val settingsIntent = Intent(this, SettingsActivity::class.java)
-                startActivity(settingsIntent)
-                true
-            }
-            else -> return super.onOptionsItemSelected(item)
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
-        super.onActivityResult(requestCode, resultCode, resultData)
-        if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
-            resultData?.data?.also { uri ->
-                val inputStream: InputStream? = contentResolver.openInputStream(uri)
-                val entries : List<Map<String, String?>> = tsvReader.readAllWithHeader(inputStream!!)
-                val myIntent = Intent(this, AppsListActivity::class.java)
-                val apps = ArrayList<AppData>(entries.size)
-
-                entries.forEach { entry ->
-                    if (entry["Name"].isNullOrEmpty()) {
-                        return@forEach
-                    }
-                    val id = entry["Title ID"]
-                    val region = entry["Region"]
-                    val name = entry["Name"]
-                    val link = entry["PKG direct link"]
-                    val license = entry["zRIF"]
-                    val contentID = entry["Content ID"]
-                    val lastDateTime = entry["Last Modification Date"]
-                    val fileSize = entry["File Size"]?.toLongOrNull()
-                    val sha256 = entry["SHA256"]
-                    val minFW = entry["Required FW"]
-                    val app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
-                        contentID ?: "MISSING", lastDateTime ?: "MISSING",
-                        fileSize ?: 0, sha256 ?: "MISSING", minFW)
-                    apps.add(app)
-                }
-                apps.sortBy { it.title }
-                AppsListActivity.apps = apps
-                startActivity(myIntent)
+        when (item.itemId) {
+            android.R.id.home -> {
+                supportFragmentManager.popBackStack()
+                return true
             }
         }
+        return super.onOptionsItemSelected(item)
     }
 
-    private fun isStoragePermissionGranted(): Boolean {
-        return  if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                Log.v("perms", "Permission is granted")
-                true
-            } else {
-                Log.v("perms", "Permission is revoked")
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
-                false
-            }
+    fun showUpButton() {
+        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
     }
+
+    fun hideUpButton() {
+        supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+    }
+
 }
