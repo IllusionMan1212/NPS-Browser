@@ -30,6 +30,11 @@
         <item name="windowNoTitle">true</item>
     </style>
 
+    <style name="NPSTheme.Splash" parent="NPSTheme">
+        <item name="android:statusBarColor">#FF00A7FF</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+
     <style name="NPSTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="NPSTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
