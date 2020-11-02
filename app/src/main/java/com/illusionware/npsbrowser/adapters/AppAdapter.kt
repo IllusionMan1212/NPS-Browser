@@ -1,33 +1,73 @@
 package com.illusionware.npsbrowser.adapters
 
 import android.content.Context
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
-import androidx.recyclerview.widget.RecyclerView
+import com.github.wrdlbrnft.modularadapter.ModularAdapter
+import com.github.wrdlbrnft.sortedlistadapter.SortedListAdapter
 import com.illusionware.npsbrowser.AppData
 import com.illusionware.npsbrowser.R
-import kotlin.collections.ArrayList
+import com.illusionware.npsbrowser.activities.MainActivity
+import com.illusionware.npsbrowser.fragments.SingleAppFragment
+import com.illusionware.npsbrowser.fragments.mainactivity.MainActivityFragment
+import java.util.Comparator
 
-class AppAdapter(private val appsList: ArrayList<AppData>, val context : Context) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
-    private final val LIST_ITEM = 0
-    private final val GRID_ITEM = 1
-    var isSwitchView = true
+private val comparator: Comparator<AppData> = SortedListAdapter.ComparatorBuilder<AppData>()
+    .setOrderForModel(AppData::class.java) { a, b -> a.title?.compareTo(b.title!!)!! }
+    .build()
 
-    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        var appTitle: TextView = view.findViewById(R.id.appTitle)
-        var appRegion: TextView = view.findViewById(R.id.appRegion)
-        var appMinFW: TextView = view.findViewById(R.id.appMinFW)
-        var appLastDate: TextView = view.findViewById(R.id.appLastDate)
+class AppAdapter(val context: Context) : SortedListAdapter<AppData>(context, AppData::class.java, comparator) {
+    private val LIST_ITEM = 0
+    private val GRID_ITEM = 1
+    private var isSwitchView = true
+
+    inner class AppViewHolder(itemView: View) :
+        SortedListAdapter.ViewHolder<AppData?>(itemView) {
+        var appTitle: TextView = itemView.findViewById(R.id.appTitle)
+        var appRegion: TextView = itemView.findViewById(R.id.appRegion)
+        var appMinFW: TextView = itemView.findViewById(R.id.appMinFW)
+        var appLastDate: TextView = itemView.findViewById(R.id.appLastDate)
+
+        override fun performBind(item: AppData) {
+            appTitle.text = item.title
+            appTitle.isSelected = true
+            appRegion.text =  item.region
+            appMinFW.text =  item.minFW
+            appMinFW.background = null;
+
+            if (appMinFW.text.isNotBlank()) {
+                val drawable = ResourcesCompat.getDrawable(
+                    context.resources,
+                    R.drawable.rect_red,
+                    null
+                )
+                appMinFW.background = drawable;
+            }
+            appLastDate.text =  item.lastDateTime
+        }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(inflater: LayoutInflater, parent: ViewGroup, viewType: Int): AppViewHolder {
         return if (viewType == LIST_ITEM) {
-            ViewHolder( LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false))
+            AppViewHolder(
+                inflater.inflate(
+                    R.layout.recycler_item_list,
+                    parent,
+                    false
+                )
+            )
         } else {
-            ViewHolder( LayoutInflater.from(parent.context).inflate(R.layout.grid_item, parent, false))
+            AppViewHolder(
+                inflater.inflate(
+                    R.layout.recycler_item_grid,
+                    parent,
+                    false
+                )
+            )
         }
     }
 
@@ -39,34 +79,8 @@ class AppAdapter(private val appsList: ArrayList<AppData>, val context : Context
         }
     }
 
-    public fun toggleItemViewType(type: Int): Boolean {
+    fun toggleItemViewType(type: Int): Boolean {
         isSwitchView = type == 0
         return isSwitchView
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.appTitle.text =  appsList[position].title
-        holder.appTitle.isSelected = true
-        holder.appRegion.text =  appsList[position].region
-        holder.appMinFW.text =  appsList[position].minFW
-        holder.appMinFW.background = null;
-
-        if (holder.appMinFW.text.isNotBlank()) {
-            val drawable = ResourcesCompat.getDrawable(context.resources, R.drawable.rect_red, null)
-            holder.appMinFW.background = drawable;
-        }
-        holder.appLastDate.text =  appsList[position].lastDateTime
-    }
-
-    override fun getItemCount(): Int {
-        return appsList.size
-    }
-
-    fun updateData(apps: ArrayList<AppData>) {
-        appsList.clear()
-        notifyDataSetChanged()
-        appsList.addAll(apps)
-        notifyDataSetChanged()
-
     }
 }

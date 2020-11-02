@@ -6,12 +6,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.Toast
+import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProviders
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.GridLayoutManager
@@ -22,21 +21,18 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.illusionware.npsbrowser.AppData
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.RecyclerTouchListener
-import com.illusionware.npsbrowser.activities.SingleAppActivity
-import com.illusionware.npsbrowser.activities.MainActivity
+import com.illusionware.npsbrowser.fragments.SingleAppFragment
 import com.illusionware.npsbrowser.adapters.AppAdapter
 import com.illusionware.npsbrowser.fragments.SettingsFragment
-import kotlinx.android.synthetic.main.appbar.*
 import java.io.InputStream
 
-class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListener {
+class MainActivityFragment : Fragment() {
 
     var recyclerView : RecyclerView? = null
     var viewAdapter: AppAdapter? = null
+    var filteredModelList: ArrayList<AppData>? = null
 
     companion object {
-
-        fun newInstance() = MainActivityFragment()
         var apps : ArrayList<AppData>? = arrayListOf()
     }
 
@@ -51,68 +47,14 @@ class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListe
 
     private lateinit var viewModel: MainActivityViewModel
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        activity?.supportFragmentManager?.addOnBackStackChangedListener(this);
-        setHasOptionsMenu(true)
-    }
-
-    override fun onBackStackChanged() {
-        // enable Up button only  if there are entries on the backstack
-        if (requireActivity().supportFragmentManager.backStackEntryCount < 1) {
-            (activity as MainActivity?)?.hideUpButton()
-        }
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        setHasOptionsMenu(true)
         activity?.title = resources.getString(R.string.app_name)
 
         val view = inflater.inflate(R.layout.main_fragment, container, false)
-
-        recyclerView = view?.findViewById(R.id.appsRecycler)
-
-        if (apps != null) {
-            viewAdapter = AppAdapter(apps!!, requireContext())
-        }
-        viewAdapter?.notifyDataSetChanged()
-        val orientation = this.resources.configuration.orientation
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val isViewAsList = prefs.getString("layout_type", "0")
-        if (isViewAsList == "0") {
-            viewAdapter?.toggleItemViewType(0)
-            recyclerView?.layoutManager = LinearLayoutManager(context)
-            viewAdapter?.notifyDataSetChanged()
-        } else {
-            viewAdapter?.toggleItemViewType(1)
-            recyclerView?.layoutManager = GridLayoutManager(context,
-                    if (orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2)
-            viewAdapter?.notifyDataSetChanged()
-        }
-        recyclerView?.adapter = viewAdapter
-
-        recyclerView?.addOnItemTouchListener(RecyclerTouchListener(requireContext(), recyclerView!!, object : RecyclerTouchListener.ClickListener {
-            override fun onClick(view: View?, position: Int) {
-                val myIntent = Intent(context, SingleAppActivity::class.java)
-                SingleAppActivity.app = apps!![position]
-
-                startActivity(myIntent)
-            }
-
-            override fun onLongClick(view: View?, recyclerView: RecyclerView?, position: Int) {
-                Toast.makeText(context, "TODO: Long Click ", Toast.LENGTH_SHORT).show()
-            }
-        }
-        ))
-        return view
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-
-        (activity as MainActivity?)!!.setSupportActionBar(toolbar)
 
         view?.findViewById<FloatingActionButton>(R.id.tsvChooserButton)?.setOnClickListener {
             if (!isStoragePermissionGranted())
@@ -125,35 +67,68 @@ class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListe
         }
         viewModel = ViewModelProviders.of(this).get(MainActivityViewModel::class.java)
         // TODO: Use the ViewModel
-    }
 
-    override fun onCreateOptionsMenu(menu : Menu, menuInflater : MenuInflater) {
-        menuInflater.inflate(R.menu.toolbar_main, menu)
-        super.onCreateOptionsMenu(menu, menuInflater)
-    }
+        recyclerView = view?.findViewById(R.id.appsRecycler)
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                activity?.supportFragmentManager
-                    ?.beginTransaction()
-                    ?.replace(
-                        R.id.container,
-                        SettingsFragment()
-                    )
-                    ?.addToBackStack("settings")
-                    ?.commit()
-                true
-            }
-            else -> return super.onOptionsItemSelected(item)
+        if (viewAdapter == null) {
+            viewAdapter = AppAdapter(requireContext())
+            viewAdapter?.edit()?.add(apps!!)?.commit()
         }
+
+        if (apps != null) {
+            filteredModelList = apps
+        }
+        viewAdapter?.notifyDataSetChanged()
+
+        recyclerView?.adapter = viewAdapter
+
+        val orientation = resources.configuration.orientation
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val isViewAsList = prefs.getString("layout_type", "0")
+        if (isViewAsList == "0") {
+            viewAdapter?.toggleItemViewType(0)
+            recyclerView?.layoutManager = LinearLayoutManager(context)
+            viewAdapter?.notifyDataSetChanged()
+        } else {
+            viewAdapter?.toggleItemViewType(1)
+            recyclerView?.layoutManager = GridLayoutManager(
+                context,
+                if (orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
+            )
+            viewAdapter?.notifyDataSetChanged()
+        }
+
+        recyclerView?.addOnItemTouchListener(RecyclerTouchListener(
+            requireContext(),
+            recyclerView!!,
+            object : RecyclerTouchListener.ClickListener {
+                override fun onClick(view: View?, position: Int) {
+                    SingleAppFragment.app = filteredModelList!![position]
+                    activity?.supportFragmentManager
+                        ?.beginTransaction()
+                        ?.replace(R.id.container,
+                            SingleAppFragment()
+                        )
+                        ?.addToBackStack("single app")
+                        ?.commit()
+                }
+
+                override fun onLongClick(
+                    view: View?,
+                    recyclerView: RecyclerView?,
+                    position: Int
+                ) {
+                    Toast.makeText(context, "TODO: Long Click $position", Toast.LENGTH_SHORT).show()
+                }
+            }
+        ))
+        return view
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
         super.onActivityResult(requestCode, resultCode, resultData)
         if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
             resultData?.data?.also { uri ->
-                Log.d("file_location", uri.toString())
                 val inputStream: InputStream? = activity?.contentResolver?.openInputStream(uri)
                 val entries : List<Map<String, String?>> = tsvReader.readAllWithHeader(inputStream!!)
                 apps?.clear()
@@ -176,15 +151,19 @@ class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListe
                     val fileSize = entry["File Size"]?.toLongOrNull()
                     val sha256 = entry["SHA256"]
                     val minFW = entry["Required FW"]
-                    val app = AppData(id, region, name, link ?: "MISSING", license ?: "MISSING",
+                    val app = AppData(
+                        id, region, name, link ?: "MISSING", license ?: "MISSING",
                         contentID ?: "MISSING", lastDateTime ?: "MISSING",
-                        fileSize, sha256 ?: "MISSING", minFW)
-
+                        fileSize, sha256 ?: "MISSING", minFW
+                    )
                     apps?.add(app)
                 }
                 apps?.sortBy { it.title }
+                filteredModelList = apps
+
                 recyclerView = view?.findViewById(R.id.appsRecycler)
-                viewAdapter = AppAdapter(apps!!, requireContext())
+                viewAdapter = AppAdapter(requireContext())
+                viewAdapter?.edit()?.add(apps!!)?.commit()
                 val orientation = this.resources.configuration.orientation
                 val prefs = PreferenceManager.getDefaultSharedPreferences(context)
                 val isViewAsList = prefs.getString("layout_type", "0")
@@ -195,8 +174,10 @@ class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListe
                     viewAdapter?.notifyDataSetChanged()
                 } else {
                     viewAdapter?.toggleItemViewType(1)
-                    recyclerView?.layoutManager = GridLayoutManager(context,
-                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2)
+                    recyclerView?.layoutManager = GridLayoutManager(
+                        context,
+                        if (orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
+                    )
                     viewAdapter?.notifyDataSetChanged()
                 }
 
@@ -205,14 +186,96 @@ class MainActivityFragment : Fragment(), FragmentManager.OnBackStackChangedListe
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.main, menu)
+
+        val searchItem = menu.findItem(R.id.action_search)
+        val searchView: SearchView = searchItem.actionView as SearchView
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(query: String): Boolean {
+                filteredModelList = filter(apps!!, query) as ArrayList<AppData>?
+                viewAdapter?.edit()?.replaceAll(filteredModelList!!)?.commit()
+                recyclerView?.scrollToPosition(0)
+                return false
+            }
+        })
+        super.onCreateOptionsMenu(menu, menuInflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                activity?.supportFragmentManager
+                    ?.beginTransaction()
+                    ?.replace(
+                        R.id.container,
+                        SettingsFragment()
+                    )
+                    ?.addToBackStack("settings")
+                    ?.commit()
+                true
+            }
+            R.id.action_search -> {
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewAdapter?.edit()?.replaceAll(apps!!)?.commit()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val orientation = newConfig.orientation
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val isViewAsList = prefs.getString("layout_type", "0")
+        if (isViewAsList == "0") {
+            val pos = (recyclerView?.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+            viewAdapter?.toggleItemViewType(0)
+            recyclerView?.layoutManager = LinearLayoutManager(context)
+            (recyclerView?.layoutManager as LinearLayoutManager).scrollToPosition(pos)
+            viewAdapter?.notifyDataSetChanged()
+        } else {
+            val pos = (recyclerView?.layoutManager as GridLayoutManager).findFirstVisibleItemPosition()
+            viewAdapter?.toggleItemViewType(1)
+            recyclerView?.layoutManager = GridLayoutManager(
+                context,
+                if (orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
+            )
+            (recyclerView?.layoutManager as GridLayoutManager).scrollToPosition(pos)
+            viewAdapter?.notifyDataSetChanged()
+        }
+    }
+
     private fun isStoragePermissionGranted(): Boolean {
-        return  if (checkSelfPermission(this.context!!, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            Log.v("perms", "Permission is granted")
+        return  if (checkSelfPermission(
+                this.requireContext(),
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED) {
             true
         } else {
-            Log.v("perms", "Permission is revoked")
             requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
             false
         }
+    }
+
+    private fun filter(models: List<AppData>, query: String): List<AppData>? {
+        val lowerCaseQuery = query.toLowerCase()
+        val filteredModelList: MutableList<AppData> = ArrayList()
+        for (model in models) {
+            val title: String = model.title?.toLowerCase()!!
+            val id: String = model.titleID?.toLowerCase()!!
+            if (title.contains(lowerCaseQuery) || id.contains(lowerCaseQuery)) {
+                filteredModelList.add(model)
+            }
+        }
+        return filteredModelList
     }
 }

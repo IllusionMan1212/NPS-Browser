@@ -10,7 +10,7 @@
         <item name="colorSecondaryVariant">@color/colorSecondaryDark</item>
         <item name="colorOnSecondary">@color/colorOnSecondary</item>
 
-        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:statusBarColor">@color/colorAmoled</item>
         <item name="alertDialogTheme">@style/NPSTheme.AlertDialog</item>
     </style>
 

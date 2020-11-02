@@ -7,8 +7,6 @@
     android:clipChildren="false"
     tools:context=".fragments.mainactivity.MainActivityFragment">
 
-    <include layout="@layout/appbar" />
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/appsRecycler"
         android:layout_width="match_parent"
@@ -21,18 +19,21 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:spanCount="2"
-        tools:listitem="@layout/grid_item" />
+        tools:listitem="@layout/recycler_item_grid" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/tsvChooserButton"
         android:layout_width="52dp"
         android:layout_height="52dp"
         android:layout_marginBottom="40dp"
+        android:backgroundTint="@color/colorPrimary"
         android:clickable="true"
         android:focusable="true"
-        android:src="@drawable/ic_add_yellow_24dp"
+        android:src="@drawable/ic_add_24dp"
+        app:borderWidth="2dp"
         app:fabCustomSize="52dp"
         app:layout_anchor="@+id/appsRecycler"
         app:layout_anchorGravity="bottom|center"
         app:maxImageSize="32dp" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -173,7 +173,7 @@
             android:layout_marginTop="30dp"
             android:layout_marginEnd="141dp"
             android:contentDescription="Single app icon"
-            app:srcCompat="@drawable/ic_games_black_24dp" />
+            app:srcCompat="@drawable/ic_games_placeholder_24dp" />
 
     </LinearLayout>
 

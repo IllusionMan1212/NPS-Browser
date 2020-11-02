@@ -15,6 +15,7 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:backgroundTint="@color/colorAmoled"
             app:cardBackgroundColor="@color/colorPrimary"
             app:cardElevation="4dp"
             app:cardUseCompatPadding="false"
@@ -32,7 +33,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_games_black_24dp" />
+                    app:srcCompat="@drawable/ic_games_placeholder_24dp" />
 
                 <TextView
                     android:id="@+id/appTitle"

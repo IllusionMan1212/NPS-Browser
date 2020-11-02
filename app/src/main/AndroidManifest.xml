@@ -18,18 +18,12 @@
         <activity android:name=".activities.SplashActivity" android:theme="@style/NPSTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity android:name=".activities.MainActivity"
-            android:configChanges="screenSize|screenLayout|keyboardHidden">
+            android:configChanges="screenSize|screenLayout|keyboardHidden|orientation">
         </activity>
-        <activity
-            android:name=".activities.SingleAppActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="LockedOrientationActivity"
-            android:parentActivityName=".activities.MainActivity" />
     </application>
 
 </manifest>
