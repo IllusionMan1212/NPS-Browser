@@ -12,17 +12,23 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
+import com.bumptech.glide.Glide
 import com.illusionware.npsbrowser.AppData
 import com.illusionware.npsbrowser.R
-import java.lang.Exception
 
 class SingleAppFragment : Fragment() {
+    private val baseStoreURL = "https://store.playstation.com/store/api/chihiro/00_09_000/container"
+
     companion object {
         lateinit var app : AppData
     }
+
+    // TODO: either use binding or make vars for all the views
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,25 +65,37 @@ class SingleAppFragment : Fragment() {
 
         view?.findViewById<TextView>(R.id.singleAppContentId)?.setOnLongClickListener {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-            val clipData = ClipData.newPlainText("Content ID", view?.findViewById<TextView>(R.id.singleAppContentId)?.text)
+            val clipData = ClipData.newPlainText(
+                "Content ID",
+                view?.findViewById<TextView>(R.id.singleAppContentId)?.text
+            )
             clipboardManager.setPrimaryClip(clipData)
             Toast.makeText(requireContext(), "Content ID Copied to Clipboard!", Toast.LENGTH_SHORT).show()
             true
         }
 
+        // click listener for the download button
         view?.findViewById<Button>(R.id.singleAppDownloadButton)?.setOnClickListener {
             try {
                 var request = DownloadManager.Request(Uri.parse(app.link))
                 request.setTitle(app.title)
                 request.setDescription("Downloading...")
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, app.title + ".pkg") // TODO: set up preference for this
+                request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    app.title + ".pkg"
+                ) // TODO: set up preference for this
                 downloadManager.enqueue(request)
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "An error occurred while downloading. please try again", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "An error occurred while downloading. please try again",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
 
+        // long click listener for download button
         view?.findViewById<Button>(R.id.singleAppDownloadButton)?.setOnLongClickListener {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("PKG URL", app.link)
@@ -85,6 +103,27 @@ class SingleAppFragment : Fragment() {
             Toast.makeText(requireContext(), "PKG URL Copied to Clipboard", Toast.LENGTH_SHORT).show()
             true
         }
+
+        // set the height for the error text to 0 if there's no error so that the scrollview can take more space
+        if (view?.findViewById<TextView>(R.id.singleAppError)?.text.isNullOrEmpty()) {
+            view?.findViewById<TextView>(R.id.singleAppError)?.layoutParams?.height = 0
+        }
+
+        if (app.contentID != null) {
+            val circularProgressDrawable = CircularProgressDrawable(requireContext())
+            circularProgressDrawable.setColorSchemeColors(0x43EB92)
+            circularProgressDrawable.strokeWidth = 10f
+            circularProgressDrawable.centerRadius = 180f
+            circularProgressDrawable.start()
+
+            val image : ImageView? = view?.findViewById<ImageView>(R.id.singleAppIcon)
+            val iconURL = getImage(app.contentID!!)
+            if (iconURL != null) {
+                // TODO: make the options a requestOptions
+                Glide.with(this).load(iconURL).placeholder(circularProgressDrawable).error(R.drawable.ic_games_placeholder_24dp).into(image!!)
+            }
+        }
+
         return view
     }
 
@@ -111,5 +150,27 @@ class SingleAppFragment : Fragment() {
 
     private fun toGB(size: Number): Number {
         return size.toFloat() / (1024 * 1024 * 1024)
+    }
+
+    private fun getImage(contentID: String): String? {
+        when (contentID.substring(0, 2)) {
+            "EP" -> {
+                // european games
+                return "$baseStoreURL/SA/en/999/${contentID}/image"
+            }
+            "UP" -> {
+                // united states games
+                return "$baseStoreURL/US/en/999/${contentID}/image"
+            }
+            "JP" -> {
+                // japanese games
+                return "$baseStoreURL/jp/ja/999/${contentID}/image"
+            }
+            "KP" -> {
+                // korean(?) games
+                // TODO: do this
+            }
+        }
+        return null
     }
 }
