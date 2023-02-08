@@ -2,4 +2,10 @@
     <string name="app_name">NPS Browser</string>
     <string name="title_activity_settings">Settings</string>
     <string name="search">Search</string>
+    <string name="download">Download</string>
+    <string name="copy_zrif">Copy zRIF</string>
+    <string name="content_id">Content ID</string>
+    <string name="size">Size</string>
+    <string name="minfw">MinFW</string>
+    <string name="single_app_icon">Single app icon</string>
 </resources>

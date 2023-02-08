@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NPS Browser</string>
+    <string name="title_activity_settings">设置</string>
+    <string name="search">搜索</string>
+    <string name="download">下载</string>
+    <string name="copy_zrif">复制 zRIF</string>
+    <string name="content_id">游戏ID</string>
+    <string name="size">大小</string>
+    <string name="minfw">最低固件</string>
+    <string name="single_app_icon">应用图标</string>
+</resources>
