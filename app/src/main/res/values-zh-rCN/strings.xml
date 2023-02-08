@@ -9,4 +9,10 @@
     <string name="size">大小</string>
     <string name="minfw">最低固件</string>
     <string name="single_app_icon">应用图标</string>
+    <string name="no_license">注意：这个应用没有提供授权</string>
+    <string name="cart_only">这个游戏只有实体卡</string>
+    <string name="no_download_link">注意：这个应用程序没有提供下载链接</string>
+    <string name="download_error">下载过程中发生错误，请重试</string>
+    <string name="pkg_url_copied">PKG 地址已复制到剪贴板</string>
+    <string name="zrif_copied">zRIF 已复制到剪贴板</string>
 </resources>

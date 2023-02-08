@@ -53,15 +53,15 @@ class SingleAppFragment : Fragment() {
             view?.findViewById<TextView>(R.id.singleAppFwVerTitle)?.visibility = View.INVISIBLE
         }
         if (app.license == "MISSING") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No license was provided for this app."
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.no_license)
             view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
         if (app.link == "CART ONLY") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "CART ONLY GAME"
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.cart_only)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
             view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         } else if (app.link == "MISSING") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No download link was provided for this app."
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.no_download_link)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
             view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
@@ -92,7 +92,7 @@ class SingleAppFragment : Fragment() {
             } catch (e: Exception) {
                 Toast.makeText(
                     requireContext(),
-                    "An error occurred while downloading. please try again",
+                    getString(R.string.download_error),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -103,7 +103,7 @@ class SingleAppFragment : Fragment() {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("PKG URL", app.link)
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(), "PKG URL Copied to Clipboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.pkg_url_copied), Toast.LENGTH_SHORT).show()
             true
         }
 
@@ -112,7 +112,7 @@ class SingleAppFragment : Fragment() {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("zRIF", app.license)
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(),"zRIF Copied to Clipboard",Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(),getString(R.string.zrif_copied),Toast.LENGTH_SHORT).show()
         }
 
         // set the height for the error text to 0 if there's no error so that the scrollview can take more space
