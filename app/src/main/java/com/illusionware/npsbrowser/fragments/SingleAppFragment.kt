@@ -54,13 +54,16 @@ class SingleAppFragment : Fragment() {
         }
         if (app.license == "MISSING") {
             view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No license was provided for this app."
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
         if (app.link == "CART ONLY") {
             view?.findViewById<TextView>(R.id.singleAppError)?.text = "CART ONLY GAME"
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         } else if (app.link == "MISSING") {
             view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No download link was provided for this app."
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
 
         view?.findViewById<TextView>(R.id.singleAppContentId)?.setOnLongClickListener {
@@ -102,6 +105,14 @@ class SingleAppFragment : Fragment() {
             clipboardManager.setPrimaryClip(clipData)
             Toast.makeText(requireContext(), "PKG URL Copied to Clipboard", Toast.LENGTH_SHORT).show()
             true
+        }
+
+        // click listener for the copyzrifbutton button
+        view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.setOnClickListener {
+            val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clipData = ClipData.newPlainText("zRIF", app.license)
+            clipboardManager.setPrimaryClip(clipData)
+            Toast.makeText(requireContext(),"zRIF Copied to Clipboard",Toast.LENGTH_SHORT).show()
         }
 
         // set the height for the error text to 0 if there's no error so that the scrollview can take more space
