@@ -86,7 +86,7 @@ class SingleAppFragment : Fragment() {
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 request.setDestinationInExternalPublicDir(
                     Environment.DIRECTORY_DOWNLOADS,
-                    app.title + ".pkg"
+                    app.title!!.replace("[\\\\/:*?\"<>|]".toRegex(), " ") + ".pkg"
                 ) // TODO: set up preference for this
                 downloadManager.enqueue(request)
             } catch (e: Exception) {
