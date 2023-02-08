@@ -11,6 +11,7 @@
     <string name="no_license">Warning: No license was provided for this content.</string>
     <string name="cart_only">CART ONLY GAME</string>
     <string name="no_download_link">Warning: No download link was provided for this content.</string>
+    <string name="downloading">Downloading...</string>
     <string name="download_error">An error occurred while downloading. please try again</string>
     <string name="pkg_url_copied">PKG URL Copied to Clipboard</string>
     <string name="zrif_copied">zRIF Copied to Clipboard</string>

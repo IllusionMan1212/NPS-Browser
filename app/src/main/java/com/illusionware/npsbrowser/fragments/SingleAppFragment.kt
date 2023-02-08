@@ -82,7 +82,7 @@ class SingleAppFragment : Fragment() {
             try {
                 var request = DownloadManager.Request(Uri.parse(app.link))
                 request.setTitle(app.title)
-                request.setDescription("Downloading...")
+                request.setDescription(getString(R.string.downloading))
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 request.setDestinationInExternalPublicDir(
                     Environment.DIRECTORY_DOWNLOADS,
