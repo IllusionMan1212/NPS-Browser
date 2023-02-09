@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    namespace 'com.illusionware.npsbrowser'
     compileSdkVersion 33
 
     defaultConfig {
@@ -18,12 +19,9 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    dataBinding {
-        enabled = true
-    }
-
-    viewBinding {
-        enabled = true
+    buildFeatures {
+        dataBinding = true
+        viewBinding = true
     }
 
     buildTypes {
