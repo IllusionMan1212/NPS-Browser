@@ -12,7 +12,7 @@ class SettingsFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        PreferenceManager.setDefaultValues(context, R.xml.root_preferences, false);
+        PreferenceManager.setDefaultValues(requireContext(), R.xml.root_preferences, false)
         activity?.supportFragmentManager
             ?.beginTransaction()
             ?.replace(
@@ -35,7 +35,7 @@ class SettingsFragment : Fragment() {
     class PrefsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
-            PreferenceManager.setDefaultValues(context, R.xml.root_preferences, false);
+            PreferenceManager.setDefaultValues(requireContext(), R.xml.root_preferences, false)
         }
     }
 

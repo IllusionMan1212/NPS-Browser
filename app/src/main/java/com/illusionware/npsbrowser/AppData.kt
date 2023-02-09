@@ -41,17 +41,17 @@ data class AppData(
         return result
     }
 
-    override fun <T : Any?> isSameModelAs(model: T): Boolean {
+    override fun <T : Any> isSameModelAs(model: T): Boolean {
         if (model is AppData) {
-            val other: AppData = model as AppData
+            val other: AppData = model
             return "${other.titleID} ${other.title}" == "$titleID $title"
         }
         return false
     }
 
-    override fun <T : Any?> isContentTheSameAs(model: T): Boolean {
+    override fun <T : Any> isContentTheSameAs(model: T): Boolean {
         if (model is AppData) {
-            val other: AppData = model as AppData
+            val other: AppData = model
             return title?.equals(other.title) ?: (other.title == null)
         }
         return false
