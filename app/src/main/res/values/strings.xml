@@ -15,4 +15,5 @@
     <string name="download_error">An error occurred while downloading. please try again</string>
     <string name="pkg_url_copied">PKG URL Copied to Clipboard</string>
     <string name="zrif_copied">zRIF Copied to Clipboard</string>
+    <string name="content_id_copied">Content ID Copied to Clipboard</string>
 </resources>

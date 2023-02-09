@@ -16,4 +16,5 @@
     <string name="pkg_url_copied">PKG 地址已复制到剪贴板</string>
     <string name="zrif_copied">zRIF 已复制到剪贴板</string>
     <string name="downloading">下载中...</string>
+    <string name="content_id_copied">内容ID 已复制到剪贴板</string>
 </resources>

@@ -73,7 +73,7 @@ class SingleAppFragment : Fragment() {
                 view?.findViewById<TextView>(R.id.singleAppContentId)?.text
             )
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(), "Content ID Copied to Clipboard!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.content_id_copied), Toast.LENGTH_SHORT).show()
             true
         }
 
