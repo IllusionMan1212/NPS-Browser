@@ -42,7 +42,7 @@ class SingleAppFragment : Fragment() {
 
         view?.findViewById<TextView>(R.id.singleAppTitle)?.text = "[${app.titleID}] ${app.title}"
         if (app.fileSize != null) {
-             view?.findViewById<TextView>(R.id.singleAppSize)?.text = prettifySize()
+            view?.findViewById<TextView>(R.id.singleAppSize)?.text = prettifySize()
         } else {
             view?.findViewById<TextView>(R.id.singleAppSizeTitle)?.visibility = View.INVISIBLE
         }
@@ -53,43 +53,46 @@ class SingleAppFragment : Fragment() {
             view?.findViewById<TextView>(R.id.singleAppFwVerTitle)?.visibility = View.INVISIBLE
         }
         if (app.license == "MISSING") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No license was provided for this app."
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.no_license)
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
         if (app.link == "CART ONLY") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "CART ONLY GAME"
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.cart_only)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         } else if (app.link == "MISSING") {
-            view?.findViewById<TextView>(R.id.singleAppError)?.text = "Warning: No download link was provided for this app."
+            view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.no_download_link)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
 
         view?.findViewById<TextView>(R.id.singleAppContentId)?.setOnLongClickListener {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText(
                 "Content ID",
-                view?.findViewById<TextView>(R.id.singleAppContentId)?.text
+                view.findViewById<TextView>(R.id.singleAppContentId)?.text
             )
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(), "Content ID Copied to Clipboard!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.content_id_copied), Toast.LENGTH_SHORT).show()
             true
         }
 
         // click listener for the download button
         view?.findViewById<Button>(R.id.singleAppDownloadButton)?.setOnClickListener {
             try {
-                var request = DownloadManager.Request(Uri.parse(app.link))
+                val request = DownloadManager.Request(Uri.parse(app.link))
                 request.setTitle(app.title)
-                request.setDescription("Downloading...")
+                request.setDescription(getString(R.string.downloading))
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 request.setDestinationInExternalPublicDir(
                     Environment.DIRECTORY_DOWNLOADS,
-                    app.title + ".pkg"
+                    app.title!!.replace("[\\\\/:*?\"<>|]".toRegex(), " ") + ".pkg"
                 ) // TODO: set up preference for this
                 downloadManager.enqueue(request)
             } catch (e: Exception) {
                 Toast.makeText(
                     requireContext(),
-                    "An error occurred while downloading. please try again",
+                    getString(R.string.download_error),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -100,8 +103,16 @@ class SingleAppFragment : Fragment() {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("PKG URL", app.link)
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(), "PKG URL Copied to Clipboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.pkg_url_copied), Toast.LENGTH_SHORT).show()
             true
+        }
+
+        // click listener for the copyzrifbutton button
+        view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.setOnClickListener {
+            val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clipData = ClipData.newPlainText("zRIF", app.license)
+            clipboardManager.setPrimaryClip(clipData)
+            Toast.makeText(requireContext(),getString(R.string.zrif_copied),Toast.LENGTH_SHORT).show()
         }
 
         // set the height for the error text to 0 if there's no error so that the scrollview can take more space
@@ -116,7 +127,7 @@ class SingleAppFragment : Fragment() {
             circularProgressDrawable.centerRadius = 180f
             circularProgressDrawable.start()
 
-            val image : ImageView? = view?.findViewById<ImageView>(R.id.singleAppIcon)
+            val image : ImageView? = view?.findViewById(R.id.singleAppIcon)
             val iconURL = getImage(app.contentID!!)
             if (iconURL != null) {
                 // TODO: make the options a requestOptions
@@ -137,7 +148,7 @@ class SingleAppFragment : Fragment() {
         if (app.fileSize!!.toFloat() / 1024 > 1) {
             return "%.1f KB".format(toKB(app.fileSize!!))
         }
-        return "${app.fileSize!!} Bytes";
+        return "${app.fileSize!!} Bytes"
     }
 
     private fun toKB(size: Number): Number {
@@ -167,8 +178,12 @@ class SingleAppFragment : Fragment() {
                 return "$baseStoreURL/jp/ja/999/${contentID}/image"
             }
             "KP" -> {
-                // korean(?) games
-                // TODO: do this
+                // korean games
+                return "$baseStoreURL/kr/ko/999/${contentID}/image"
+            }
+            "HP" -> {
+                // asia games
+                return "$baseStoreURL/HK/zh/999/${contentID}/image"
             }
         }
         return null

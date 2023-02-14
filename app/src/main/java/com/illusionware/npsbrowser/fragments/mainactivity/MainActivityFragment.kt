@@ -25,6 +25,8 @@ import com.illusionware.npsbrowser.fragments.SingleAppFragment
 import com.illusionware.npsbrowser.adapters.AppAdapter
 import com.illusionware.npsbrowser.fragments.SettingsFragment
 import java.io.InputStream
+import java.util.*
+import kotlin.collections.ArrayList
 
 class MainActivityFragment : Fragment() {
 
@@ -83,7 +85,7 @@ class MainActivityFragment : Fragment() {
         recyclerView?.adapter = viewAdapter
 
         val orientation = resources.configuration.orientation
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
         val isViewAsList = prefs.getString("layout_type", "0")
         if (isViewAsList == "0") {
             viewAdapter?.toggleItemViewType(0)
@@ -165,7 +167,7 @@ class MainActivityFragment : Fragment() {
                 viewAdapter = AppAdapter(requireContext())
                 viewAdapter?.edit()?.add(apps!!)?.commit()
                 val orientation = this.resources.configuration.orientation
-                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
                 val isViewAsList = prefs.getString("layout_type", "0")
 
                 if (isViewAsList == "0") {
@@ -234,7 +236,7 @@ class MainActivityFragment : Fragment() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val orientation = newConfig.orientation
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
         val isViewAsList = prefs.getString("layout_type", "0")
         if (isViewAsList == "0") {
             val pos = (recyclerView?.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
@@ -267,11 +269,11 @@ class MainActivityFragment : Fragment() {
     }
 
     private fun filter(models: List<AppData>, query: String): List<AppData>? {
-        val lowerCaseQuery = query.toLowerCase()
+        val lowerCaseQuery = query.lowercase(Locale.getDefault())
         val filteredModelList: MutableList<AppData> = ArrayList()
         for (model in models) {
-            val title: String = model.title?.toLowerCase()!!
-            val id: String = model.titleID?.toLowerCase()!!
+            val title: String = model.title?.lowercase(Locale.getDefault())!!
+            val id: String = model.titleID?.lowercase(Locale.getDefault())!!
             if (title.contains(lowerCaseQuery) || id.contains(lowerCaseQuery)) {
                 filteredModelList.add(model)
             }

@@ -6,11 +6,11 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.ListPreference
 
 class ThemePreference : ListPreference {
-    constructor(context : Context?, attrs : AttributeSet?, defStyleAttr : Int) : super(context, attrs, defStyleAttr)
+    constructor(context : Context?, attrs : AttributeSet?, defStyleAttr : Int) : super(context!!, attrs, defStyleAttr)
 
-    constructor(context : Context?, attrs : AttributeSet?) : super(context, attrs)
+    constructor(context : Context?, attrs : AttributeSet?) : super(context!!, attrs)
 
-    constructor(context : Context?) : super(context)
+    constructor(context : Context?) : super(context!!)
 
     override fun callChangeListener(newValue : Any?) : Boolean {
         AppCompatDelegate.setDefaultNightMode(when ((newValue as String).toInt()) {

@@ -57,46 +57,59 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="Game Title" />
 
-            <TextView
-                android:id="@+id/singleAppContentIdTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="48dp"
-                android:layout_marginTop="19dp"
-                android:layout_marginEnd="48dp"
-                android:fontFamily="sans-serif-black"
-                android:text="Content ID"
-                android:textAlignment="center"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/singleAppDownloadButton" />
-
             <Button
                 android:id="@+id/singleAppDownloadButton"
                 android:layout_width="0dp"
                 android:layout_height="66dp"
                 android:layout_marginStart="48dp"
-                android:layout_marginTop="9dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="48dp"
-                android:text="Download"
+                android:text="@string/download"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/singleAppTitle" />
+
+            <Button
+                android:id="@+id/singleAppCopyZRIFButton"
+                android:layout_width="0dp"
+                android:layout_height="66dp"
+                android:layout_marginStart="48dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="48dp"
+                android:text="@string/copy_zrif"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/singleAppDownloadButton" />
+
+            <TextView
+                android:id="@+id/singleAppContentIdTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="48dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="48dp"
+                android:fontFamily="sans-serif-black"
+                android:text="@string/content_id"
+                android:textAlignment="center"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/singleAppCopyZRIFButton" />
 
             <TextView
                 android:id="@+id/singleAppContentId"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="48dp"
-                android:layout_marginTop="11dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="48dp"
                 android:fontFamily="sans-serif-light"
                 android:textAlignment="center"
-                android:textSize="24sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
@@ -109,12 +122,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="48dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginEnd="48dp"
                 android:fontFamily="sans-serif-black"
-                android:text="Size"
+                android:text="@string/size"
                 android:textAlignment="center"
-                android:textSize="26sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
@@ -122,33 +135,16 @@
                 app:layout_constraintTop_toBottomOf="@+id/singleAppContentId" />
 
             <TextView
-                android:id="@+id/singleAppSize"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="48dp"
-                android:layout_marginTop="7dp"
-                android:layout_marginEnd="48dp"
-                android:fontFamily="sans-serif-light"
-                android:textAlignment="center"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/singleAppSizeTitle"
-                tools:text="Size" />
-
-            <TextView
                 android:id="@+id/singleAppFwVerTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="48dp"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginEnd="48dp"
                 android:fontFamily="sans-serif-black"
-                android:text="MinFW"
+                android:text="@string/minfw"
                 android:textAlignment="center"
-                android:textSize="26sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
@@ -156,21 +152,39 @@
                 app:layout_constraintTop_toBottomOf="@+id/singleAppSize" />
 
             <TextView
+                android:id="@+id/singleAppSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="48dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="48dp"
+                android:fontFamily="sans-serif-light"
+                android:textAlignment="center"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/singleAppSizeTitle"
+                tools:text="Size" />
+
+            <TextView
                 android:id="@+id/singleAppFwVer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="48dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="48dp"
                 android:fontFamily="sans-serif-light"
                 android:textAlignment="center"
-                android:textSize="24sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/singleAppFwVerTitle"
                 tools:text="MinFW" />
+
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
@@ -191,7 +205,7 @@
             android:layout_marginStart="100dp"
             android:layout_marginTop="0dp"
             android:layout_marginEnd="100dp"
-            android:contentDescription="Single app icon"
+            android:contentDescription="@string/single_app_icon"
             app:srcCompat="@drawable/ic_games_placeholder_24dp" />
 
     </LinearLayout>

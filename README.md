@@ -2,7 +2,7 @@
 NPS Client app for android written in kotlin.
 
 ## Building
-The application targets android 10 (API 29) with a minimum version of android 6 (API 23).
+The application targets android 13 (API 33) with a minimum version of android 6 (API 23).
 
 1. Create a `keystore` using android studio: `Build > Generate Signed Bundle / APK > Next > Create new`
 2. Create a `keystore.properties` file in the root directory of the repo.
