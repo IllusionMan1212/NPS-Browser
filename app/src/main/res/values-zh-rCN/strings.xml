@@ -1,20 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NPS Browser</string>
-    <string name="title_activity_settings">设置</string>
-    <string name="search">搜索</string>
-    <string name="download">下载</string>
-    <string name="copy_zrif">复制 zRIF</string>
-    <string name="content_id">内容ID</string>
-    <string name="size">大小</string>
-    <string name="minfw">最低固件</string>
-    <string name="single_app_icon">应用图标</string>
-    <string name="no_license">注意：这个内容没有提供授权</string>
-    <string name="cart_only">这个游戏只有实体卡</string>
-    <string name="no_download_link">注意：这个内容没有提供下载链接</string>
-    <string name="download_error">下载过程中发生错误，请重试</string>
-    <string name="pkg_url_copied">PKG 地址已复制到剪贴板</string>
-    <string name="zrif_copied">zRIF 已复制到剪贴板</string>
-    <string name="downloading">下载中...</string>
-    <string name="content_id_copied">内容ID 已复制到剪贴板</string>
+	<string name="app_name">NPS Browser</string>
+	<string name="title_activity_settings">设置</string>
+	<string name="search">搜索</string>
+	<string name="download">下载</string>
+	<string name="copy_zrif">复制zRIF</string>
+	<string name="content_id">内容ID</string>
+	<string name="size">大小</string>
+	<string name="minfw">最低固件版本</string>
+	<string name="single_app_icon">应用图标</string>
+	<string name="no_license">注意：这个内容没有提供授权</string>
+	<string name="cart_only">这个游戏只有实体卡</string>
+	<string name="no_download_link">注意：这个内容没有提供下载链接</string>
+	<string name="download_error">下载过程中发生错误，请重试</string>
+	<string name="pkg_url_copied">PKG地址已复制到剪贴板</string>
+	<string name="zrif_copied">zRIF已复制到剪贴板</string>
+	<string name="downloading">下载中...</string>
+	<string name="content_id_copied">内容ID已复制到剪贴板</string>
+	<string name="appearance">外观</string>
+	<string name="theme">主题</string>
+	<string name="layout">布局</string>
+
+	<string-array name="app_theme">
+		<item>明亮</item>
+		<item>黑暗</item>
+		<item>使用系统默认</item>
+	</string-array>
+
+	<string-array name="layout_type">
+		<item>列表</item>
+		<item>网格</item>
+	</string-array>
 </resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">NPS Browser</string>
+	<string name="title_activity_settings">設置</string>
+	<string name="search">搜尋</string>
+	<string name="download">下載</string>
+	<string name="copy_zrif">複製zRIF</string>
+	<string name="content_id">內容ID</string>
+	<string name="size">檔案大小</string>
+	<string name="minfw">最低韌體版本</string>
+	<string name="single_app_icon">應用程式圖標</string>
+	<string name="no_license">注意：這個內容沒有提供授權</string>
+	<string name="cart_only">這個遊戲只有實體卡</string>
+	<string name="no_download_link">注意：這個內容沒有提供下載鏈接</string>
+	<string name="download_error">下載過程中發生錯誤，請重試</string>
+	<string name="pkg_url_copied">PKG地址已複製到剪貼板</string>
+	<string name="zrif_copied">zRIF已複製到剪貼板</string>
+	<string name="downloading">正在下載...</string>
+	<string name="content_id_copied">內容ID已複製到剪貼板</string>
+	<string name="appearance">外觀</string>
+	<string name="theme">主題</string>
+	<string name="layout">佈局</string>
+
+	<string-array name="app_theme">
+		<item>明亮</item>
+		<item>黑暗</item>
+		<item>使用系統默認</item>
+	</string-array>
+
+	<string-array name="layout_type">
+		<item>列表</item>
+		<item>網格</item>
+	</string-array>
+</resources>
