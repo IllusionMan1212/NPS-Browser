@@ -33,7 +33,7 @@ class AppAdapter(val context: Context) : SortedListAdapter<AppData>(context, App
         var appLastDate: TextView = itemView.findViewById(R.id.appLastDate)
 
         override fun performBind(item: AppData) {
-            appTitle.text = item.title
+            appTitle.text = item.titleID + " | " + item.title
             appTitle.isSelected = true
             appRegion.text =  item.region
             appMinFW.text =  item.minFW

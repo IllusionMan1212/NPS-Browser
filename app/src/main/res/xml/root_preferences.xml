@@ -1,19 +1,19 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <PreferenceCategory android:title="Appearance">
+    <PreferenceCategory android:title="@string/appearance">
 
         <com.illusionware.npsbrowser.ThemePreference
             android:defaultValue="2"
             android:entries="@array/app_theme"
             android:entryValues="@array/app_theme_val"
             android:key="app_theme"
-            android:title="Theme" />
+            android:title="@string/theme" />
         <ListPreference
             android:defaultValue="0"
             android:entries="@array/layout_type"
             android:entryValues="@array/layout_type_val"
             android:key="layout_type"
-            android:title="Layout"
+            android:title="@string/layout"
             app:useSimpleSummaryProvider="true"/>
     </PreferenceCategory>
 </PreferenceScreen>
