@@ -7,5 +7,6 @@
     <color name="colorSecondaryDark">#888888</color>
     <color name="colorOnSecondary">#111111</color>
     <color name="colorAmoled">#FFFFFF</color>
-    <color name="colorAccent">#F93422</color>
+    <color name="colorError">#F93422</color>
+    <color name="colorAccent">#545FBF</color>
 </resources>

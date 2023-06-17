@@ -2,6 +2,7 @@ package com.illusionware.npsbrowser.activities
 
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentManager
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.fragments.mainactivity.MainActivityFragment
@@ -9,6 +10,8 @@ import com.illusionware.npsbrowser.fragments.mainactivity.MainActivityFragment
 class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener  {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
         setTheme(R.style.NPSTheme)
         setContentView(R.layout.activity_main)

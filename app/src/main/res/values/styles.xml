@@ -30,9 +30,13 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="NPSTheme.Splash" parent="NPSTheme">
-        <item name="android:statusBarColor">#FF00A7FF</item>
-        <item name="android:windowBackground">@drawable/splash</item>
+    <style name="NPSTheme.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/colorAccent</item>
+
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_nps_fg_no_shadow</item>
+        <item name="windowSplashScreenAnimationDuration">500</item>
+
+        <item name="postSplashScreenTheme">@style/NPSTheme</item>
     </style>
 
     <style name="NPSTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />

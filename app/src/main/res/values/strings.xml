@@ -1,34 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">NPS Browser</string>
-	<string name="title_activity_settings">Settings</string>
-	<string name="search">Search</string>
-	<string name="download">Download</string>
-	<string name="copy_zrif">Copy zRIF</string>
-	<string name="content_id">Content ID</string>
-	<string name="size">Size</string>
-	<string name="minfw">Minimum Firmware Version</string>
-	<string name="single_app_icon">Single app icon</string>
-	<string name="no_license">Warning: No license was provided for this content.</string>
-	<string name="cart_only">CART ONLY GAME</string>
-	<string name="no_download_link">Warning: No download link was provided for this content.</string>
-	<string name="downloading">Downloading...</string>
-	<string name="download_error">An error occurred while downloading. please try again</string>
-	<string name="pkg_url_copied">PKG URL Copied to Clipboard</string>
-	<string name="zrif_copied">zRIF Copied to Clipboard</string>
-	<string name="content_id_copied">Content ID Copied to Clipboard</string>
-	<string name="appearance">Appearance</string>
-	<string name="theme">Theme</string>
-	<string name="layout">Layout</string>
+    <string name="app_name">NPS Browser</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="search">Search</string>
+    <string name="download">Download</string>
+    <string name="copy_zrif">Copy zRIF</string>
+    <string name="content_id">Content ID</string>
+    <string name="size">Size</string>
+    <string name="minfw">Minimum Firmware Version</string>
+    <string name="single_app_icon">Single app icon</string>
+    <string name="no_license">Warning: No license was provided for this content.</string>
+    <string name="cart_only">CART ONLY GAME</string>
+    <string name="no_download_link">Warning: No download link was provided for this content.</string>
+    <string name="downloading">Downloading...</string>
+    <string name="download_error">An error occurred while downloading. please try again</string>
+    <string name="pkg_url_copied">PKG URL Copied to Clipboard</string>
+    <string name="zrif_copied">zRIF Copied to Clipboard</string>
+    <string name="content_id_copied">Content ID Copied to Clipboard</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme">Theme</string>
+    <string name="layout">Layout</string>
 
-	<string-array name="app_theme">
-		<item>Light</item>
-		<item>Dark</item>
-		<item>Use System Default</item>
-	</string-array>
+    <string-array name="app_theme">
+        <item>Light</item>
+        <item>Dark</item>
+        <item>Use System Default</item>
+    </string-array>
 
-	<string-array name="layout_type">
-		<item>List</item>
-		<item>Grid</item>
-	</string-array>
+    <string-array name="layout_type">
+        <item>List</item>
+        <item>Grid</item>
+    </string-array>
+    <string name="title_activity_thing">thing</string>
 </resources>
