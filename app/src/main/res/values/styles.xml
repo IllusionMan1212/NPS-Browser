@@ -1,7 +1,7 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="NPSTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="NPSTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
@@ -14,7 +14,7 @@
         <item name="alertDialogTheme">@style/NPSTheme.AlertDialog</item>
     </style>
 
-    <style name="NPSTheme.AlertDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+    <style name="NPSTheme.AlertDialog" parent="Theme.Material3.DayNight.Dialog.Alert">
         <item name="colorPrimary">@color/colorOnPrimary</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
@@ -34,13 +34,9 @@
         <item name="windowSplashScreenBackground">@color/colorAccent</item>
 
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_nps_fg_no_shadow</item>
-        <item name="windowSplashScreenAnimationDuration">500</item>
+        <item name="windowSplashScreenAnimationDuration">800</item>
 
         <item name="postSplashScreenTheme">@style/NPSTheme</item>
     </style>
-
-    <style name="NPSTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
-
-    <style name="NPSTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
 </resources>

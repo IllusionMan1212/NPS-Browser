@@ -1,58 +1,296 @@
 package com.illusionware.npsbrowser.activities
 
 import android.os.Bundle
-import android.view.MenuItem
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.fragment.app.FragmentManager
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.illusionware.npsbrowser.Preferences
 import com.illusionware.npsbrowser.R
-import com.illusionware.npsbrowser.fragments.mainactivity.MainActivityFragment
+import com.illusionware.npsbrowser.ui.theme.ColorAccent
+import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme
+import com.illusionware.npsbrowser.ui.theme.Typography
+import com.illusionware.npsbrowser.ui.components.*
+import com.illusionware.npsbrowser.ui.pages.SettingsScreen
+import com.illusionware.npsbrowser.ui.pages.OnBoarding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
-class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener  {
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
-        setTheme(R.style.NPSTheme)
-        setContentView(R.layout.activity_main)
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportFragmentManager.addOnBackStackChangedListener(this);
-
-        if (supportFragmentManager.backStackEntryCount > 0) {
-            showUpButton()
-        }
-
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.container, MainActivityFragment())
-                .commitNow()
+        setContent {
+            Router()
         }
     }
+}
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                supportFragmentManager.popBackStack()
-                return true
+@Composable
+fun Router() {
+    val prefs = Preferences(LocalContext.current)
+    var theme by remember { runBlocking { mutableStateOf(prefs.theme.first()) } }
+    var seenOnboarding by remember { runBlocking { mutableStateOf(prefs.seenOnboarding.first()) } }
+    val navController = rememberNavController()
+
+    val darkTheme = when (theme) {
+        0 -> false
+        1 -> true
+        else -> isSystemInDarkTheme()
+    }
+
+    NPSBrowserTheme(darkTheme = darkTheme) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = if (seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = if (seenOnboarding) "Home" else "Onboarding",
+            ) {
+                composable(route = "Home") {
+                    HomePage(
+                        navigateToSettings = { navController.navigate("Settings") }
+                    )
+                }
+                composable(route = "Settings") {
+                    SettingsScreen(
+                        navigationGoBack = { navController.popBackStack() },
+                        onThemeChange = { v -> theme = v },
+                    )
+                }
+                composable(route = "Onboarding") {
+                    OnBoarding(
+                        navigateToHome = {
+                            navController.popBackStack()
+                            seenOnboarding = true
+                            navController.navigate("Home")
+                        },
+                        darkTheme = darkTheme
+                    )
+                }
             }
         }
-        return super.onOptionsItemSelected(item)
     }
+}
 
-    override fun onBackStackChanged() {
-        // enable Up button only  if there are entries on the backstack
-        if (supportFragmentManager.backStackEntryCount < 1) {
-            hideUpButton()
-        } else {
-            showUpButton()
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+@Preview()
+fun HomePage(navigateToSettings: () -> Unit = {}) {
+    var isSearchOpen by rememberSaveable { mutableStateOf(false)}
+    var searchQuery by rememberSaveable { mutableStateOf("")}
+    val searchBar = remember { FocusRequester() }
+    var layoutDialogOpen by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    if (!isSearchOpen) {
+                        Text(text = stringResource(id = R.string.app_name))
+                    }
+                },
+                actions = {
+                    if (isSearchOpen) {
+                        NPSIconButton(
+                            tooltip = "Close Search",
+                            onClick = { isSearchOpen = false }
+                        ){
+                            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Close Search")
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = {str -> searchQuery = str},
+                            Modifier
+                                .weight(1.0f)
+                                .focusRequester(searchBar),
+                            placeholder = {
+                                Text(text = stringResource(id = R.string.search), style = Typography.bodyLarge)
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        if (searchQuery.isNotEmpty()) {
+                            NPSIconButton(
+                                tooltip = "Clear Search",
+                                onClick = { searchQuery = "" }
+                            ){
+                                Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear Search")
+                            }
+                        }
+
+                        LaunchedEffect(Unit) {
+                            searchBar.requestFocus()
+                        }
+                    }
+                    if (!isSearchOpen) {
+                        NPSIconButton(
+                            tooltip = stringResource(id = R.string.search_tooltip),
+                            onClick = { isSearchOpen = true }
+                        ){
+                            Icon(imageVector = Icons.Filled.Search, contentDescription = stringResource(
+                                id = R.string.search_tooltip
+                            ))
+                        }
+                    }
+                    NPSIconButton(
+                        tooltip = stringResource(id = R.string.layout),
+                        onClick = { layoutDialogOpen = true }
+                    ) {
+                        Icon(imageVector = Icons.Filled.GridView, contentDescription = stringResource(
+                            id = R.string.layout
+                        ))
+                    }
+                    NPSIconButton(
+                        tooltip = stringResource(id = R.string.title_activity_settings),
+                        onClick = { navigateToSettings() }
+                    ){
+                        Icon(imageVector = Icons.Filled.Settings, contentDescription = stringResource(
+                            id = R.string.title_activity_settings
+                        ))
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(Modifier.padding(padding)) {
+            NoTsvs(navigateToSettings = navigateToSettings)
+        }
+        // TODO: only show NoTsvs when there are no Tsvs loaded
+
+        if (layoutDialogOpen) {
+            LayoutDialog(onDismiss = { layoutDialogOpen = false })
         }
     }
+}
 
-    private fun showUpButton() {
-        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+@Composable
+@Preview
+fun NoTsvs(padding: PaddingValues = PaddingValues(0.dp), navigateToSettings: () -> Unit = {}) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(padding),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ph_info),
+            contentDescription = "Info",
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(92.dp)
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = "You haven't added any TSVs",
+            color = MaterialTheme.colorScheme.outline,
+            style = Typography.bodyLarge
+        )
+        Row {
+            Text(
+                text = "Add your TSV files from the ",
+                color = MaterialTheme.colorScheme.outline,
+                style = Typography.bodyLarge
+            )
+            Text(
+                text = "settings",
+                color = ColorAccent,
+                style = Typography.bodyLarge,
+                modifier = Modifier.clickable {
+                    navigateToSettings()
+                }
+            )
+        }
     }
+}
 
-    private fun hideUpButton() {
-        supportActionBar!!.setDisplayHomeAsUpEnabled(false)
+@Composable
+fun LayoutDialog(onDismiss: () -> Unit = {}) {
+    val prefs = Preferences(LocalContext.current)
+    val layout = prefs.layout.collectAsState(initial = "")
+
+    NPSAlertDialog(
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.layout),
+        buttons = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancel")
+            }
+        }
+    ) {
+        Column {
+            NPSRadioButton(
+                text = "List",
+                selected = layout.value == 0,
+                onClick = { CoroutineScope(Dispatchers.IO).launch { prefs.changeLayout(0) } },
+            )
+            NPSRadioButton(
+                text = "Grid",
+                selected = layout.value == 1,
+                onClick = { CoroutineScope(Dispatchers.IO).launch { prefs.changeLayout(1) } },
+            )
+        }
     }
 }

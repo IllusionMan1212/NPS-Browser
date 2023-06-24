@@ -2,7 +2,8 @@
 <resources>
 	<string name="app_name">NPS Browser</string>
 	<string name="title_activity_settings">設置</string>
-	<string name="search">搜尋</string>
+	<string name="search">搜尋…</string>
+	<string name="search_tooltip">搜尋</string>
 	<string name="download">下載</string>
 	<string name="copy_zrif">複製zRIF</string>
 	<string name="content_id">內容ID</string>
@@ -15,7 +16,7 @@
 	<string name="download_error">下載過程中發生錯誤，請重試</string>
 	<string name="pkg_url_copied">PKG地址已複製到剪貼板</string>
 	<string name="zrif_copied">zRIF已複製到剪貼板</string>
-	<string name="downloading">正在下載...</string>
+	<string name="downloading">正在下載…</string>
 	<string name="content_id_copied">內容ID已複製到剪貼板</string>
 	<string name="appearance">外觀</string>
 	<string name="theme">主題</string>
