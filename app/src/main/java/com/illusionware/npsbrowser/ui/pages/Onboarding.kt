@@ -5,32 +5,27 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
@@ -64,37 +59,28 @@ import com.illusionware.npsbrowser.ui.theme.md_theme_dark_onSurface
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonElevation
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.illusionware.npsbrowser.ui.components.NPSIconButton
 import kotlinx.coroutines.launch
 
-const val PAGE_COUNT = 3;
+const val PAGE_COUNT = 3
 
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("SourceLockedOrientationActivity")
@@ -243,11 +229,11 @@ fun OnBoardingSetupTSVs(
     incrementPage: () -> Unit = {},
     skipToEnd: () -> Unit = {}
 ) {
-    Scaffold() { padding ->
+    Scaffold { padding ->
         Column(
             Modifier
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 32.dp)
+                .padding(vertical = 32.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -256,22 +242,28 @@ fun OnBoardingSetupTSVs(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Setup TSVs", style = Typography.displayMedium)
-                Spacer(modifier = Modifier.height(8.dp))
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = "You can set up your TSV files on this screen",
-                        style = Typography.titleMedium.copy(color = MaterialTheme.colorScheme.outline),
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        text = "You are expected to provide the TSV files yourself. NPS Browser will NOT provide you with these files",
-                        style = Typography.titleSmall.copy(color = Color(0xFFD63A3A)),
-                        textAlign = TextAlign.Center
-                    )
+                    Text(text = "Set up TSVs", style = Typography.displayMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "You can set up your TSV files on this screen",
+                            style = Typography.titleMedium.copy(color = MaterialTheme.colorScheme.outline),
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = "You are expected to provide the TSV files yourself. NPS Browser will NOT provide you with these files",
+                            style = Typography.titleSmall.copy(color = Color(0xFFD63A3A)),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
                 Column(
                     modifier = Modifier
@@ -279,43 +271,77 @@ fun OnBoardingSetupTSVs(
                         .verticalScroll(rememberScrollState())
                         .weight(1.0f, fill = false)
                         .padding(vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    TSVGroup(title = "PS Vita") {
-                        TSVItem("Games")
-                        TSVItem("Themes")
-                        TSVItem("DLC")
-                    }
-                    TSVGroup(title = "PSP") {
-                        TSVItem("Games")
-                        TSVItem("DLC")
-                        Box(modifier = Modifier.width(110.dp))
-                    }
-                    TSVGroup(title = "PS3") {
-                        TSVItem("Games")
-                        TSVItem("DLC")
-                        Box(modifier = Modifier.width(110.dp))
-                    }
-                    TSVGroup(title = "PSX") {
-                        TSVItem("Games")
-                    }
-                    TSVGroup(title = "PSM") {
-                        TSVItem("Games")
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        TSVGroup(title = "PS Vita") {
+                            TSVButton("Games")
+                            TSVButton("Themes")
+                            TSVButton("DLC")
+                        }
+                        TSVGroup(title = "PSP") {
+                            TSVButton("Games")
+                            TSVButton("DLC")
+                            Box(modifier = Modifier.width(110.dp))
+                        }
+                        TSVGroup(title = "PS3") {
+                            TSVButton("Games")
+                            TSVButton("DLC")
+                            Box(modifier = Modifier.width(110.dp))
+                        }
+                        TSVGroup(title = "PSX") {
+                            TSVButton("Games")
+                        }
+                        TSVGroup(title = "PSM") {
+                            TSVButton("Games")
+                        }
                     }
                 }
-                OnBoardingBottomButtons(
-                    page = page,
-                    incrementPage = incrementPage,
-                    skipToEnd = skipToEnd,
-                )
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    OnBoardingBottomButtons(
+                        page = page,
+                        incrementPage = incrementPage,
+                        skipToEnd = skipToEnd,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
+fun ColumnGroup(
+    title: String,
+    modifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = modifier) {
+        Text(
+            modifier = titleModifier,
+            text = title,
+            style = TextStyle.Default.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+            ),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
 fun TSVGroup(title: String, content: @Composable RowScope.() -> Unit) {
-    Column() {
+    Column {
         Text(
             text = title,
             style = TextStyle.Default.copy(
@@ -334,13 +360,14 @@ fun TSVGroup(title: String, content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-fun TSVItem(title: String) {
+fun TSVButton(title: String) {
     var hasSelected by rememberSaveable { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { fileUri ->
         if (fileUri != null) {
+            // TODO: store file URI in preferences
             Log.d("TSVItem", "fileUri: $fileUri")
             hasSelected = true
         }
@@ -406,6 +433,165 @@ fun TSVItem(title: String) {
 }
 
 @Composable
+@Preview
+fun OnBoardingSetupSettings(
+    page: Int = 2,
+    incrementPage: () -> Unit = {},
+    decrementPage: () -> Unit = {},
+    skipToEnd: () -> Unit = {},
+    navigateToHome: () -> Unit = {},
+) {
+    val clipboard = LocalClipboardManager.current
+    var hmacKey by rememberSaveable { mutableStateOf("") }
+    var pkg2zipArgs by rememberSaveable { mutableStateOf("") }
+
+    Scaffold { padding ->
+        Column(
+            Modifier
+                .padding(padding)
+                .padding(vertical = 32.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Configure App", style = Typography.displayMedium)
+                    Text(
+                        text = "Set the app's settings to your liking and control how it behaves",
+                        style = Typography.titleMedium.copy(color = MaterialTheme.colorScheme.outline),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .weight(1.0f, fill = false)
+                        .padding(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    ColumnGroup(title = "HMAC Key", modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(
+                            text = "The HMAC Key is used to decrypt the PS Vita game updates' urls. We cannot provide this key since it's the property of Sony",
+                            style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.outline),
+                        )
+                        OutlinedTextField(
+                            value = hmacKey,
+                            onValueChange = { hmacKey = it },
+                            label = { Text(text = "HMAC Key") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            trailingIcon = {
+                                NPSIconButton(
+                                    tooltip = "Paste",
+                                    onClick = { hmacKey = clipboard.getText()?.text ?: "" }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.ContentPaste,
+                                        contentDescription = "Paste",
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    ColumnGroup(title = "Downloads", titleModifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            text = "Choose your desired directory to download and unpack packages",
+                            style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.outline),
+                        )
+                        Toggleable(
+                            title = "Unpack in download directory",
+                        )
+                        Toggleable(
+                            title = "Delete package after unpacking",
+                        )
+                        Box(
+                            Modifier.fillMaxWidth().clickable { /*TODO*/ }
+                        ) {
+                            Column(Modifier.padding(horizontal = 16.dp)) {
+                                Text(
+                                    text = "Download Directory",
+                                )
+                                Text(
+                                    text = "sdcard/Downloads",
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                        }
+                        Box(
+                            Modifier.fillMaxWidth().clickable { /*TODO*/ }
+                        ) {
+                            Column(Modifier.padding(horizontal = 16.dp)) {
+                                Text(
+                                    text = "Unpack Directory",
+                                )
+                                Text(
+                                    text = "sdcard/Unpack",
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                        }
+                    }
+                    ColumnGroup(title = "PKG2ZIP", titleModifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            text = "Modify the parameters and arguments of pkg2zip",
+                            style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.outline),
+                        )
+                        Toggleable(
+                            title = "Automatically decrypt downloaded content",
+                        )
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            value = pkg2zipArgs,
+                            onValueChange = { pkg2zipArgs = it }, // TODO: validate args are legal ??
+                            label = { Text(text = "Pkg2zip args") },
+                            placeholder = { Text(text = "-x {pkgFile} \"{zRifKey}\"") },
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    OnBoardingBottomButtons(
+                        page = page,
+                        incrementPage = incrementPage,
+                        decrementPage = decrementPage,
+                        skipToEnd = skipToEnd,
+                        navigateToHome = navigateToHome
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Toggleable(title: String) {
+    Box(
+        modifier = Modifier.clickable { /* TODO: */ },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1.0f))
+            Switch(checked = true, onCheckedChange = { /* TODO: */ })
+        }
+    }
+}
+
+@Composable
 fun OnBoardingBottomButtons(
     page: Int,
     incrementPage: () -> Unit = {},
@@ -446,29 +632,6 @@ fun OnBoardingBottomButtons(
                     Text(text = "Next")
                 }
             }
-        }
-    }
-}
-
-@Composable
-@Preview
-fun OnBoardingSetupSettings(
-    page: Int = 2,
-    incrementPage: () -> Unit = {},
-    decrementPage: () -> Unit = {},
-    skipToEnd: () -> Unit = {},
-    navigateToHome: () -> Unit = {},
-) {
-    Scaffold() { padding ->
-        Column(Modifier.padding(padding)) {
-            Text(text = "Configure App")
-            OnBoardingBottomButtons(
-                page = page,
-                incrementPage = incrementPage,
-                decrementPage = decrementPage,
-                skipToEnd = skipToEnd,
-                navigateToHome = navigateToHome
-            )
         }
     }
 }
