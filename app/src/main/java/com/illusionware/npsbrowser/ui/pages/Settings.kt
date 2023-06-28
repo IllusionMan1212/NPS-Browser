@@ -99,10 +99,6 @@ fun SettingsScreen(navigationGoBack: () -> Unit = {}, onThemeChange: (v: Int) ->
     }
 }
 
-
-
-
-
 @Composable
 fun Appearance(onThemeChange: (v: Int) -> Unit) {
     val prefs = Preferences(LocalContext.current)
@@ -162,7 +158,7 @@ fun Updates() {
                     }
                     hmacOpenDialog = false
                 }) {
-                    Text(text = "Ok")
+                    Text(text = "OK")
                 }
             }
         ) {
@@ -238,7 +234,7 @@ fun Downloads() {
         )
         DialogSetting(
             title = "Download Directory",
-            value = downloadDir,
+            value = Uri.decode(downloadDir),
             icon = Icons.Outlined.FileDownload,
             onClick = {
                 downloadDirPicker.launch(Uri.EMPTY)
@@ -246,7 +242,7 @@ fun Downloads() {
         )
         DialogSetting(
             title = "Unpack Directory",
-            value = unpackDir,
+            value = Uri.decode(unpackDir),
             icon = Icons.Outlined.Unarchive,
             onClick = {
                 unpackDirPicker.launch(Uri.EMPTY)
@@ -302,7 +298,7 @@ fun Pkg2Zip() {
                     }
                     pkg2zipOpenDialog = false
                 }) {
-                    Text(text = "Ok")
+                    Text(text = "OK")
                 }
             }
         ) {
