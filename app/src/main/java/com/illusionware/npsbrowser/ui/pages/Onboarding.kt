@@ -3,7 +3,7 @@ package com.illusionware.npsbrowser.ui.pages
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.util.Log
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -68,15 +68,21 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
+import com.illusionware.npsbrowser.ConsoleType
+import com.illusionware.npsbrowser.DataType
+import com.illusionware.npsbrowser.Preferences
 import com.illusionware.npsbrowser.ui.components.NPSIconButton
 import kotlinx.coroutines.launch
 
@@ -229,6 +235,9 @@ fun OnBoardingSetupTSVs(
     incrementPage: () -> Unit = {},
     skipToEnd: () -> Unit = {}
 ) {
+    val prefs = Preferences(LocalContext.current)
+    val scope = rememberCoroutineScope()
+
     Scaffold { padding ->
         Column(
             Modifier
@@ -277,25 +286,52 @@ fun OnBoardingSetupTSVs(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         TSVGroup(title = "PS Vita") {
-                            TSVButton("Games")
-                            TSVButton("Themes")
-                            TSVButton("DLC")
+                            TSVButton(
+                                "Games",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.GAMES, it) }}
+                            )
+                            TSVButton(
+                                "Themes",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.THEMES, it) }}
+                            )
+                            TSVButton(
+                                "DLC",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.DLC, it) }}
+                            )
                         }
                         TSVGroup(title = "PSP") {
-                            TSVButton("Games")
-                            TSVButton("DLC")
+                            TSVButton(
+                                "Games",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSP, DataType.GAMES, it) }}
+                            )
+                            TSVButton(
+                                "DLC",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSP, DataType.DLC, it) }}
+                            )
                             Box(modifier = Modifier.width(110.dp))
                         }
                         TSVGroup(title = "PS3") {
-                            TSVButton("Games")
-                            TSVButton("DLC")
+                            TSVButton(
+                                "Games",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PS3, DataType.GAMES, it) }}
+                            )
+                            TSVButton(
+                                "DLC",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PS3, DataType.DLC, it) }}
+                            )
                             Box(modifier = Modifier.width(110.dp))
                         }
                         TSVGroup(title = "PSX") {
-                            TSVButton("Games")
+                            TSVButton(
+                                "Games",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSX, DataType.GAMES, it) }}
+                            )
                         }
                         TSVGroup(title = "PSM") {
-                            TSVButton("Games")
+                            TSVButton(
+                                "Games",
+                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSM, DataType.GAMES, it) }}
+                            )
                         }
                     }
                 }
@@ -360,15 +396,14 @@ fun TSVGroup(title: String, content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-fun TSVButton(title: String) {
+fun TSVButton(title: String, onFinish: (Uri) -> Unit) {
     var hasSelected by rememberSaveable { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { fileUri ->
         if (fileUri != null) {
-            // TODO: store file URI in preferences
-            Log.d("TSVItem", "fileUri: $fileUri")
+            onFinish(fileUri)
             hasSelected = true
         }
     }
@@ -442,8 +477,44 @@ fun OnBoardingSetupSettings(
     navigateToHome: () -> Unit = {},
 ) {
     val clipboard = LocalClipboardManager.current
-    var hmacKey by rememberSaveable { mutableStateOf("") }
-    var pkg2zipArgs by rememberSaveable { mutableStateOf("") }
+    val prefs = Preferences(LocalContext.current)
+    val scope = rememberCoroutineScope()
+
+    var hmacKey by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
+    var pkg2zipArgs = prefs.pkg2zipParams.collectAsState(initial = "").value
+    val downloadDir = prefs.downloadDir.collectAsState(initial = "").value
+    val unpackDir = prefs.unpackDir.collectAsState(initial = "").value
+    val unpackInDownload = prefs.unpackInDownload.collectAsState(initial = false).value
+    val deleteAfterUnpack = prefs.deleteAfterUnpack.collectAsState(initial = false).value
+    val autoDecrypt = prefs.pkg2zipAutoDecrypt.collectAsState(initial = true).value
+
+    val downloadDirPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { dirUri ->
+        if (dirUri != null) {
+            scope.launch {
+                prefs.setDownloadDir(dirUri.toString())
+            }
+        }
+    }
+
+    val unpackDirPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { dirUri ->
+        if (dirUri != null) {
+            scope.launch {
+                prefs.setUnpackDir(dirUri.toString())
+            }
+        }
+    }
+
+    fun setHmacKey(key: String) {
+        if (key.isNotEmpty()) {
+            scope.launch {
+                prefs.setHMACKey(key)
+            }
+        }
+    }
 
     Scaffold { padding ->
         Column(
@@ -485,14 +556,21 @@ fun OnBoardingSetupSettings(
                         )
                         OutlinedTextField(
                             value = hmacKey,
-                            onValueChange = { hmacKey = it },
+                            onValueChange = {
+                                hmacKey = it
+                                setHmacKey(it.text)
+                            },
                             label = { Text(text = "HMAC Key") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             trailingIcon = {
                                 NPSIconButton(
                                     tooltip = "Paste",
-                                    onClick = { hmacKey = clipboard.getText()?.text ?: "" }
+                                    onClick = {
+                                        val text = clipboard.getText()?.text ?: ""
+                                        hmacKey = TextFieldValue(text, selection = TextRange(text.length))
+                                        setHmacKey(text)
+                                    }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.ContentPaste,
@@ -508,36 +586,54 @@ fun OnBoardingSetupSettings(
                             text = "Choose your desired directory to download and unpack packages",
                             style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.outline),
                         )
-                        Toggleable(
-                            title = "Unpack in download directory",
-                        )
-                        Toggleable(
-                            title = "Delete package after unpacking",
-                        )
-                        Box(
-                            Modifier.fillMaxWidth().clickable { /*TODO*/ }
-                        ) {
-                            Column(Modifier.padding(horizontal = 16.dp)) {
-                                Text(
-                                    text = "Download Directory",
-                                )
-                                Text(
-                                    text = "sdcard/Downloads",
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
+                        Column {
+                            Toggleable(
+                                title = "Unpack in download directory",
+                                checked = unpackInDownload,
+                                onCheckedChange = {
+                                    scope.launch {
+                                        prefs.setUnpackInDownload(it)
+                                    }
+                                },
+                            )
+                            Toggleable(
+                                title = "Delete package after unpacking",
+                                checked = deleteAfterUnpack,
+                                onCheckedChange = {
+                                    scope.launch {
+                                        prefs.setDeleteAfterUnpack(it)
+                                    }
+                                },
+                            )
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { downloadDirPicker.launch(Uri.EMPTY) }
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Download Directory",
+                                    )
+                                    Text(
+                                        text = Uri.decode(downloadDir).ifEmpty { "None" },
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
                             }
-                        }
-                        Box(
-                            Modifier.fillMaxWidth().clickable { /*TODO*/ }
-                        ) {
-                            Column(Modifier.padding(horizontal = 16.dp)) {
-                                Text(
-                                    text = "Unpack Directory",
-                                )
-                                Text(
-                                    text = "sdcard/Unpack",
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { unpackDirPicker.launch(Uri.EMPTY) }
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Unpack Directory",
+                                    )
+                                    Text(
+                                        text = Uri.decode(unpackDir).ifEmpty { "None" },
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
                             }
                         }
                     }
@@ -549,11 +645,24 @@ fun OnBoardingSetupSettings(
                         )
                         Toggleable(
                             title = "Automatically decrypt downloaded content",
+                            checked = autoDecrypt,
+                            onCheckedChange = {
+                                scope.launch {
+                                    prefs.setPkg2zipAutoDecrypt(it)
+                                }
+                            },
                         )
                         OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                             value = pkg2zipArgs,
-                            onValueChange = { pkg2zipArgs = it }, // TODO: validate args are legal ??
+                            onValueChange = {
+                                pkg2zipArgs = it
+                                scope.launch {
+                                    prefs.setPkg2zipParams(it)
+                                }
+                            }, // TODO: validate args are legal ??
                             label = { Text(text = "Pkg2zip args") },
                             placeholder = { Text(text = "-x {pkgFile} \"{zRifKey}\"") },
                         )
@@ -576,9 +685,13 @@ fun OnBoardingSetupSettings(
 }
 
 @Composable
-fun Toggleable(title: String) {
+fun Toggleable(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Box(
-        modifier = Modifier.clickable { /* TODO: */ },
+        modifier = Modifier
+            .clickable onCheckedChange@{
+                onCheckedChange(!checked)
+            }
+            .padding(vertical = 16.dp),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -586,7 +699,7 @@ fun Toggleable(title: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(text = title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1.0f))
-            Switch(checked = true, onCheckedChange = { /* TODO: */ })
+            Switch(checked = checked, onCheckedChange = null)
         }
     }
 }
@@ -599,20 +712,25 @@ fun OnBoardingBottomButtons(
     skipToEnd: () -> Unit = {},
     navigateToHome: () -> Unit = {},
 ) {
+    val prefs = Preferences(LocalContext.current)
+    val scope = rememberCoroutineScope()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.1f),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = if (page != 2) Arrangement.SpaceBetween else Arrangement.End,
     ) {
-        FilledTonalButton(
-            onClick = skipToEnd,
-            colors = ButtonDefaults.filledTonalButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            ),
-            contentPadding = PaddingValues(horizontal = 18.dp)
-        ) {
-            Text(text = "Skip")
+        if (page == 1) {
+            FilledTonalButton(
+                onClick = skipToEnd,
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(horizontal = 18.dp)
+            ) {
+                Text(text = "Skip")
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (page != 1) {
@@ -621,7 +739,15 @@ fun OnBoardingBottomButtons(
                 }
             }
             if (page == 2) {
-                Button(onClick = navigateToHome, contentPadding = PaddingValues(horizontal = 18.dp)) {
+                Button(
+                    onClick = {
+                        navigateToHome()
+                        scope.launch {
+                            prefs.finishOnboarding()
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = 18.dp)
+                ) {
                     Text(text = "Finish")
                 }
             } else {
