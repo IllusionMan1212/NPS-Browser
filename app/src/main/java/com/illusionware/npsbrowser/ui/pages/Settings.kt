@@ -3,6 +3,9 @@ package com.illusionware.npsbrowser.ui.pages
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,9 +22,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.outlined.ArrowCircleDown
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.ArrowOutward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.SubdirectoryArrowRight
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,8 +56,11 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.illusionware.npsbrowser.ConsoleType
+import com.illusionware.npsbrowser.DataType
 import com.illusionware.npsbrowser.Preferences
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.ui.components.NPSAlertDialog
@@ -90,6 +103,7 @@ fun SettingsScreen(navigationGoBack: () -> Unit = {}, onThemeChange: (v: Int) ->
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(vertical = 16.dp)) {
                 Appearance(onThemeChange)
+                TsvFiles()
                 Updates()
                 Downloads()
                 Pkg2Zip()
@@ -121,6 +135,156 @@ fun Appearance(onThemeChange: (v: Int) -> Unit) {
         )
     }
 }
+
+@Composable
+fun TsvFiles() {
+    val prefs = Preferences(LocalContext.current)
+    val scope = rememberCoroutineScope()
+
+    var expanded by remember { mutableStateOf(false) }
+    val psvGames = prefs.psvGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val psvDlc = prefs.psvDLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val psvThemes = prefs.psvThemes.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val ps3Games = prefs.ps3Games.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val ps3Dlc = prefs.ps3DLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val pspGames = prefs.pspGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val pspDlc = prefs.pspDLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val psxGames = prefs.psxGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
+    val psmGames = prefs.psmGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
+
+    SettingGroup(title = "TSV Files") {
+        TSVPicker(
+            title = "PSV Games",
+            value = Uri.decode(psvGames),
+            icon = painterResource(id = R.drawable.vita_icon),
+            onFilePick = {
+                scope.launch(Dispatchers.IO) {
+                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.GAMES, it)
+                }
+            }
+        )
+        TSVPicker(
+            title = "PSV DLC",
+            value = Uri.decode(psvDlc),
+            icon = null,
+            onFilePick = {
+                scope.launch(Dispatchers.IO) {
+                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.DLC, it)
+                }
+            }
+        )
+        TSVPicker(
+            title = "PSV Themes",
+            value = Uri.decode(psvThemes),
+            icon = null,
+            onFilePick = {
+                scope.launch(Dispatchers.IO) {
+                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.THEMES, it)
+                }
+            },
+        )
+        TSVPicker(
+            title = "PS3 Games",
+            value = Uri.decode(ps3Games),
+            icon = painterResource(id = R.drawable.ps3_icon),
+            onFilePick = {
+                scope.launch(Dispatchers.IO) {
+                    prefs.setTSVFile(ConsoleType.PS3, DataType.GAMES, it)
+                }
+            }
+        )
+        if (!expanded) {
+            DialogSetting(
+                title = "Expand",
+                value = "PS3 DLC, PSP Games, PSP DLC, PSX Games, PSM Games",
+                icon = Icons.Outlined.ArrowDropDown,
+                singleLine = true,
+                onClick = { expanded = true },
+            )
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TSVPicker(
+                    title = "PS3 DLC",
+                    value = Uri.decode(ps3Dlc),
+                    icon = null,
+                    onFilePick = {
+                        scope.launch(Dispatchers.IO) {
+                            prefs.setTSVFile(ConsoleType.PS3, DataType.DLC, it)
+                        }
+                    }
+                )
+                TSVPicker(
+                    title = "PSP Games",
+                    value = Uri.decode(pspGames),
+                    icon = painterResource(id = R.drawable.psp_icon),
+                    onFilePick = {
+                        scope.launch(Dispatchers.IO) {
+                            prefs.setTSVFile(ConsoleType.PSP, DataType.GAMES, it)
+                        }
+                    }
+                )
+                TSVPicker(
+                    title = "PSP DLC",
+                    value = Uri.decode(pspDlc),
+                    icon = null,
+                    onFilePick = {
+                        scope.launch(Dispatchers.IO) {
+                            prefs.setTSVFile(ConsoleType.PSP, DataType.DLC, it)
+                        }
+                    }
+                )
+                TSVPicker(
+                    title = "PSX Games",
+                    value = Uri.decode(psxGames),
+                    icon = painterResource(id = R.drawable.psx_icon),
+                    onFilePick = {
+                        scope.launch(Dispatchers.IO) {
+                            prefs.setTSVFile(ConsoleType.PSX, DataType.GAMES, it)
+                        }
+                    }
+                )
+                TSVPicker(
+                    title = "PSM Games",
+                    value = Uri.decode(psmGames),
+                    icon = painterResource(id = R.drawable.psm_icon),
+                    onFilePick = {
+                        scope.launch(Dispatchers.IO) {
+                            prefs.setTSVFile(ConsoleType.PSM, DataType.GAMES, it)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TSVPicker(
+    title: String,
+    value: String,
+    icon: Painter? = null,
+    onFilePick: (Uri) -> Unit,
+) {
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { fileUri ->
+        if (fileUri != null) {
+            onFilePick(fileUri)
+        }
+    }
+
+    DialogSetting(
+        title = title,
+        value = value,
+        icon = icon,
+        onClick = {
+            filePicker.launch("text/tab-separated-values")
+        }
+    )}
 
 @Composable
 fun Updates() {
@@ -374,7 +538,7 @@ fun Header(title: String) {
 }
 
 @Composable
-fun DialogSetting(title: String, value: String, icon: Painter, onClick: () -> Unit) {
+fun DialogSetting(title: String, value: String, icon: Painter?, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -384,7 +548,11 @@ fun DialogSetting(title: String, value: String, icon: Painter, onClick: () -> Un
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
-            Icon(painter = icon, contentDescription = null, modifier = Modifier.width(56.dp))
+            if (icon != null) {
+                Icon(painter = icon, contentDescription = null, modifier = Modifier.width(56.dp))
+            } else {
+                Box(modifier = Modifier.width(56.dp))
+            }
             Column {
                 Text(text = title, color = MaterialTheme.colorScheme.onBackground)
                 Text(text = value, color = ColorSecondaryLight)
@@ -394,7 +562,13 @@ fun DialogSetting(title: String, value: String, icon: Painter, onClick: () -> Un
 }
 
 @Composable
-fun DialogSetting(title: String, value: String, icon: ImageVector, onClick: () -> Unit) {
+fun DialogSetting(
+    title: String,
+    value: String,
+    icon: ImageVector?,
+    onClick: () -> Unit,
+    singleLine : Boolean = false
+) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -404,10 +578,20 @@ fun DialogSetting(title: String, value: String, icon: ImageVector, onClick: () -
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.width(56.dp))
+            if (icon != null) {
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.width(56.dp))
+            } else {
+                Box(modifier = Modifier.width(56.dp))
+            }
             Column {
                 Text(text = title, color = MaterialTheme.colorScheme.onBackground)
-                Text(text = value, color = ColorSecondaryLight)
+                Text(
+                    text = value,
+                    color = ColorSecondaryLight,
+                    maxLines = if (singleLine) 1 else Int.MAX_VALUE,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(end = 24.dp)
+                )
             }
         }
     }
