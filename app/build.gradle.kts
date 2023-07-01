@@ -100,7 +100,7 @@ dependencies {
     // Compose extras library for controlling system ui and etc.
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.31.2-alpha")
 
-    implementation("com.github.doyaaaaaken:kotlin-csv-jvm:1.8.0")
+    implementation("com.github.doyaaaaaken:kotlin-csv-jvm:1.9.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -110,4 +110,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.navigation:navigation-compose:2.6.0")
+    implementation("io.coil-kt:coil:2.4.0")
+    implementation("io.coil-kt:coil-compose:2.4.0")
 }

@@ -93,7 +93,10 @@ const val PAGE_COUNT = 3
 @Composable
 fun OnBoarding(navigateToHome: () -> Unit = {}, darkTheme: Boolean = false) {
     val systemUiController = rememberSystemUiController()
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        initialPageOffsetFraction = 0f
+    )
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 

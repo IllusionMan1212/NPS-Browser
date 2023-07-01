@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 enum class ConsoleType {
@@ -22,6 +23,11 @@ enum class DataType {
     GAMES,
     DLC,
     THEMES,
+}
+
+enum class Layout {
+    LIST,
+    GRID,
 }
 
 class Preferences(private val context: Context) {
@@ -53,7 +59,7 @@ class Preferences(private val context: Context) {
     }
 
     val layout = context.dataStore.data.map{ prefs ->
-        prefs[DATA_LAYOUT] ?: 0
+        prefs[DATA_LAYOUT] ?: Layout.LIST.ordinal
     }
     
     val seenOnboarding = context.dataStore.data.map{ prefs ->
@@ -180,7 +186,20 @@ class Preferences(private val context: Context) {
                 }
             }
         }
+    }
 
+    suspend fun getAvailableTsvs(): List<Pair<ConsoleType, DataType>> {
+        val list = mutableListOf<Pair<ConsoleType, DataType>>()
+        if (psvGames.first().isNotEmpty()) list.add(Pair(ConsoleType.PSVITA, DataType.GAMES))
+        if (psvDLC.first().isNotEmpty()) list.add(Pair(ConsoleType.PSVITA, DataType.DLC))
+        if (psvThemes.first().isNotEmpty()) list.add(Pair(ConsoleType.PSVITA, DataType.THEMES))
+        if (ps3Games.first().isNotEmpty()) list.add(Pair(ConsoleType.PS3, DataType.GAMES))
+        if (ps3DLC.first().isNotEmpty()) list.add(Pair(ConsoleType.PS3, DataType.DLC))
+        if (pspGames.first().isNotEmpty()) list.add(Pair(ConsoleType.PSP, DataType.GAMES))
+        if (pspDLC.first().isNotEmpty()) list.add(Pair(ConsoleType.PSP, DataType.DLC))
+        if (psxGames.first().isNotEmpty()) list.add(Pair(ConsoleType.PSX, DataType.GAMES))
+        if (psmGames.first().isNotEmpty()) list.add(Pair(ConsoleType.PSM, DataType.GAMES))
+        return list
     }
 
     suspend fun setHMACKey(key: String) {
