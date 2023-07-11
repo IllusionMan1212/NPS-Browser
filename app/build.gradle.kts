@@ -61,7 +61,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.4"
+        kotlinCompilerExtensionVersion = "1.4.8"
     }
     buildToolsVersion = "33.0.1"
     kotlinOptions {
@@ -76,10 +76,12 @@ repositories {
 
 dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation(platform("androidx.compose:compose-bom:2022.10.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.core:core-ktx:1.10.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2022.10.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     // Jetpack Compose
@@ -88,7 +90,7 @@ dependencies {
     androidTestImplementation(composeBom)
 
     // Material 3
-    implementation("androidx.compose.material3:material3:1.1.0")
+    implementation("androidx.compose.material3:material3:1.1.1")
     implementation("androidx.compose.material:material-icons-extended:1.4.3")
     // Android Studio Preview support
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -100,7 +102,7 @@ dependencies {
     // Compose extras library for controlling system ui and etc.
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.31.2-alpha")
 
-    implementation("com.github.doyaaaaaken:kotlin-csv-jvm:1.9.1")
+    implementation("com.github.IllusionMan1212:kotlin-csv:cedb7c5ab2")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

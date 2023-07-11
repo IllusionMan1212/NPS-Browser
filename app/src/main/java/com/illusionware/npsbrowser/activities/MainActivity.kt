@@ -3,9 +3,7 @@ package com.illusionware.npsbrowser.activities
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -32,6 +31,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +48,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,31 +69,34 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.illusionware.npsbrowser.ConsoleType
-import com.illusionware.npsbrowser.Layout
-import com.illusionware.npsbrowser.Preferences
 import com.illusionware.npsbrowser.R
+import com.illusionware.npsbrowser.data.ItemLayout
+import com.illusionware.npsbrowser.data.SettingsPreferences
+import com.illusionware.npsbrowser.model.ConsoleType
+import com.illusionware.npsbrowser.model.PackageItem
+import com.illusionware.npsbrowser.ui.components.*
+import com.illusionware.npsbrowser.ui.pages.OnBoarding
+import com.illusionware.npsbrowser.ui.pages.SettingsScreen
 import com.illusionware.npsbrowser.ui.theme.ColorAccent
+import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
 import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme
 import com.illusionware.npsbrowser.ui.theme.Typography
-import com.illusionware.npsbrowser.ui.components.*
-import com.illusionware.npsbrowser.ui.pages.SettingsScreen
-import com.illusionware.npsbrowser.ui.pages.OnBoarding
-import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
+import com.illusionware.npsbrowser.viewmodels.PackageListViewModel
+import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
 import kotlinx.coroutines.runBlocking
 
 val PlaceholderColor = Color(0x1F888888)
@@ -102,59 +105,60 @@ val redHatDisplayFamily = FontFamily(
 )
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
         setContent {
-            Router()
-        }
-    }
-}
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.Factory
+            )
+            val onboardingViewModel: OnboardingViewModel = viewModel(
+                factory = OnboardingViewModel.Factory
+            )
 
-@Composable
-fun Router() {
-    val prefs = Preferences(LocalContext.current)
-    var theme by remember { runBlocking { mutableStateOf(prefs.theme.first()) } }
-    var seenOnboarding by remember { runBlocking { mutableStateOf(prefs.seenOnboarding.first()) } }
-    val navController = rememberNavController()
+            val onboardingPrefs = onboardingViewModel.uiState.collectAsStateWithLifecycle().value
+            val appTheme = runBlocking { settingsViewModel.getAppTheme() }
+            val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
+            val navController = rememberNavController()
 
-    val darkTheme = when (theme) {
-        0 -> false
-        1 -> true
-        else -> isSystemInDarkTheme()
-    }
+            val darkTheme = when (appTheme) {
+                0 -> false
+                1 -> true
+                else -> isSystemInDarkTheme()
+            }
 
-    NPSBrowserTheme(darkTheme = darkTheme) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = if (seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
-        ) {
-            NavHost(
-                navController = navController,
-                startDestination = if (seenOnboarding) "Home" else "Onboarding",
-            ) {
-                composable(route = "Home") {
-                    HomePage(
-                        navigateToSettings = { navController.navigate("Settings") }
-                    )
-                }
-                composable(route = "Settings") {
-                    SettingsScreen(
-                        navigationGoBack = { navController.popBackStack() },
-                        onThemeChange = { v -> theme = v },
-                    )
-                }
-                composable(route = "Onboarding") {
-                    OnBoarding(
-                        navigateToHome = {
-                            navController.popBackStack()
-                            seenOnboarding = true
-                            navController.navigate("Home")
-                        },
-                        darkTheme = darkTheme
-                    )
+            NPSBrowserTheme(darkTheme = darkTheme) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = if (onboardingPrefs.seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
+                ) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = if (onboardingPrefs.seenOnboarding) "Home" else "Onboarding",
+                    ) {
+                        composable(route = "Home") {
+                            HomePage(
+                                navigateToSettings = { navController.navigate("Settings") },
+                                settingsPrefs = settingsPrefs,
+                                settingsViewModel = settingsViewModel,
+                            )
+                        }
+                        composable(route = "Settings") {
+                            SettingsScreen(
+                                navigationGoBack = { navController.popBackStack() },
+                            )
+                        }
+                        composable(route = "Onboarding") {
+                            OnBoarding(
+                                navigateToHome = {
+                                    navController.popBackStack()
+                                    navController.navigate("Home")
+                                },
+                                darkTheme = darkTheme,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -163,17 +167,18 @@ fun Router() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Preview
-fun HomePage(navigateToSettings: () -> Unit = {}) {
-    val prefs = Preferences(LocalContext.current)
+fun HomePage(
+    navigateToSettings: () -> Unit = {},
+    settingsPrefs: SettingsPreferences,
+    settingsViewModel: SettingsViewModel,
+) {
     var isSearchOpen by rememberSaveable { mutableStateOf(false)}
     var searchQuery by rememberSaveable { mutableStateOf("")}
     val searchBar = remember { FocusRequester() }
     var layoutDialogOpen by remember { mutableStateOf(false) }
 
-    val tsvs by remember { runBlocking { mutableStateOf(prefs.getAvailableTsvs()) }}
+    val tsvs = settingsViewModel.availableTsvs()
     var selectedBarItem by remember { mutableStateOf(ConsoleType.PSVITA) }
-//    val noTsvs by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -239,7 +244,7 @@ fun HomePage(navigateToSettings: () -> Unit = {}) {
                         tooltip = stringResource(id = R.string.layout),
                         onClick = { layoutDialogOpen = true }
                     ) {
-                        Icon(imageVector = Icons.Filled.GridView, contentDescription = stringResource(
+                        Icon(imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.Filled.ViewList, contentDescription = stringResource(
                             id = R.string.layout
                         ))
                     }
@@ -267,16 +272,16 @@ fun HomePage(navigateToSettings: () -> Unit = {}) {
             if (tsvs.isEmpty()) {
                 NoTsvs(navigateToSettings = navigateToSettings)
             } else {
-//                when (selectedBarItem) {
-//                    ConsoleType.PSVITA -> VitaPage(searchQuery = searchQuery)
-//                    ConsoleType.PS3 -> PS3Page(searchQuery = searchQuery)
-//                }
-                PackageList(selectedBarItem)
+                PackageList(selectedBarItem, settingsPrefs = settingsPrefs)
             }
         }
 
         if (layoutDialogOpen) {
-            LayoutDialog(onDismiss = { layoutDialogOpen = false })
+            LayoutDialog(
+                onDismiss = { layoutDialogOpen = false },
+                prefs = settingsPrefs,
+                viewModel = settingsViewModel,
+            )
         }
     }
 }
@@ -368,54 +373,82 @@ fun NoTsvs(padding: PaddingValues = PaddingValues(0.dp), navigateToSettings: () 
 }
 
 @Composable
-@Preview
-fun PackageList(type: ConsoleType = ConsoleType.PSVITA) {
-    val prefs = Preferences(LocalContext.current)
-    val layout = prefs.layout.collectAsState(initial = Layout.LIST.ordinal).value
-//    val thing = when (type) {
-//        ConsoleType.PSVITA -> {
-//            var list = ArrayList<Package>()
-//            list.add(Package("test"))
-//            val gs = prefs.psvGames.collectAsState(initial = emptyList<Package>())
-//            list.add(gs.value)
-//        }
-//        ConsoleType.PS3 -> {
-//            prefs.ps3Games.collectAsState(initial = emptyList())
-//        }
-//        ConsoleType.PSP -> {
-//            prefs.pspGames.collectAsState(initial = emptyList())
-//        }
-//        ConsoleType.PSX -> {
-//            prefs.psxGames.collectAsState(initial = emptyList())
-//        }
-//        ConsoleType.PSM -> {
-//            prefs.psmGames.collectAsState(initial = emptyList())
-//        }
-//    }
+fun PackageList(
+    type: ConsoleType = ConsoleType.PSVITA,
+    viewModel: PackageListViewModel = viewModel(
+        factory = PackageListViewModel.Factory
+    ),
+    settingsPrefs: SettingsPreferences,
+) {
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    val packages = when (type) {
+        ConsoleType.PSVITA -> {
+            uiState.packages.filter { it.consoleType == ConsoleType.PSVITA }
+        }
+        ConsoleType.PS3 -> {
+            uiState.packages.filter { it.consoleType == ConsoleType.PS3 }
+        }
+        ConsoleType.PSP -> {
+            uiState.packages.filter { it.consoleType == ConsoleType.PSP }
+        }
+        ConsoleType.PSX -> {
+            uiState.packages.filter { it.consoleType == ConsoleType.PSX }
+        }
+        ConsoleType.PSM -> {
+            uiState.packages.filter { it.consoleType == ConsoleType.PSM }
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
-        if (layout == Layout.LIST.ordinal) {
-            LazyColumn {
-                items(15) {
-                    PackageListItem()
-                }
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(140.dp),
-                contentPadding = PaddingValues(8.dp),
-            ) {
-                items(15) {
-                    PackageGridItem()
+            if (packages.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "You haven't added any TSVs for this console yet",
+                        style = Typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            } else {
+                if (settingsPrefs.layout == ItemLayout.LIST.ordinal) {
+                    LazyColumn {
+                        items(packages) {
+                            PackageListItem(it)
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(140.dp),
+                        contentPadding = PaddingValues(8.dp),
+                    ) {
+                        items(packages) {
+                            PackageGridItem(it)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PackageListItem() {
+fun PackageListItem(item: PackageItem) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -434,7 +467,7 @@ fun PackageListItem() {
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data("https://picsum.photos/200")
+                        .data("TODO:")
                         .crossfade(true)
                         .error(R.drawable.default_game_icon)
                         .build(),
@@ -451,7 +484,7 @@ fun PackageListItem() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "10 Second Ninja X",
+                            text = item.name,
                             color = MaterialTheme.colorScheme.onBackground,
                             style = Typography.bodyLarge,
                             overflow = TextOverflow.Ellipsis,
@@ -466,25 +499,33 @@ fun PackageListItem() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         ProvideTextStyle(value = Typography.bodySmall.copy(color = MaterialTheme.colorScheme.outline)) {
-                            Text(text = "US")
-                            Text(text = "3.69")
-                            Text(text = "223.8MB")
-                            Tag(title = "GAME", small = true)
+                            Text(text = item.region)
+                            if (item.minFW.isNotEmpty()) {
+                                Text(text = String.format("%.2f", item.minFW.toFloat()))
+                            }
+                            if (item.pkgSize.isNotEmpty()) {
+                                Text(text = item.pkgSize)
+                            }
+                            Tag(title = item.dataType.name, small = true)
                         }
                     }
                 }
             }
             Column {
-                Icon(
-                    painter = painterResource(id = R.drawable.no_url_icon),
-                    contentDescription = "No PKG URL",
-                    tint = Color(0xFFCB5A5A)
-                )
-                Icon(
-                    painter = painterResource(id = R.drawable.no_key_icon),
-                    contentDescription = "No Zrif Key",
-                    tint = Color(0xFFCB5A5A)
-                )
+                if (item.pkgUrl.isEmpty() || item.pkgUrl == "MISSING") {
+                    Icon(
+                        painter = painterResource(id = R.drawable.no_url_icon),
+                        contentDescription = "No PKG URL",
+                        tint = Color(0xFFCB5A5A)
+                    )
+                }
+                if (item.consoleType != ConsoleType.PSX && (item.zRif.isEmpty() && item.rap.isEmpty())) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.no_key_icon),
+                        contentDescription = "No License Key",
+                        tint = Color(0xFFCB5A5A)
+                    )
+                }
             }
         }
     }
@@ -512,8 +553,7 @@ fun Tag(title: String, small: Boolean = false) {
 }
 
 @Composable
-@Preview
-fun PackageGridItem() {
+fun PackageGridItem(item: PackageItem) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -529,7 +569,7 @@ fun PackageGridItem() {
                 content = {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data("https://picsum.photos/200")
+                            .data("TODO:")
                             .crossfade(true)
                             .error(R.drawable.default_game_icon)
                             .build(),
@@ -540,7 +580,7 @@ fun PackageGridItem() {
                             .fillMaxWidth(),
                         contentScale = ContentScale.Crop,
                     )
-                    Tag(title = "GAME")
+                    Tag(title = item.dataType.name)
                 }
             ) { measurables, constraints ->
                 val imagePlaceable = measurables[0].measure(constraints)
@@ -555,7 +595,7 @@ fun PackageGridItem() {
                 }
             }
             Text(
-                text = "10 Second Ninja X",
+                text = item.name,
                 color = MaterialTheme.colorScheme.onBackground,
                 style = Typography.bodyLarge,
                 overflow = TextOverflow.Ellipsis,
@@ -566,32 +606,41 @@ fun PackageGridItem() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ProvideTextStyle(value = Typography.bodySmall.copy(color = MaterialTheme.colorScheme.outline)) {
-                    Text(text = "US")
-                    Text(text = "3.69")
-                    Text(text = "223.8MB")
+                    Text(text = item.region)
+                    if (item.minFW.isNotEmpty()) {
+                        Text(text = String.format("%.2f", item.minFW.toFloat()))
+                    }
+                    if (item.pkgSize.isNotEmpty()) {
+                        Text(text = item.pkgSize)
+                    }
                 }
             }
             Row {
-                Icon(
-                    painter = painterResource(id = R.drawable.no_url_icon),
-                    contentDescription = "No PKG URL",
-                    tint = Color(0xFFCB5A5A)
-                )
-                Icon(
-                    painter = painterResource(id = R.drawable.no_key_icon),
-                    contentDescription = "No Zrif Key",
-                    tint = Color(0xFFCB5A5A)
-                )
+                if (item.pkgUrl.isEmpty() || item.pkgUrl == "MISSING") {
+                    Icon(
+                        painter = painterResource(id = R.drawable.no_url_icon),
+                        contentDescription = "No PKG URL",
+                        tint = Color(0xFFCB5A5A)
+                    )
+                }
+                if (item.zRif.isEmpty() && item.rap.isEmpty()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.no_key_icon),
+                        contentDescription = "No License Key",
+                        tint = Color(0xFFCB5A5A)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun LayoutDialog(onDismiss: () -> Unit) {
-    val prefs = Preferences(LocalContext.current)
-    val layout = prefs.layout.collectAsState(initial = Layout.LIST.ordinal).value
-
+fun LayoutDialog(
+    onDismiss: () -> Unit,
+    prefs: SettingsPreferences,
+    viewModel: SettingsViewModel
+) {
     NPSAlertDialog(
         onDismiss = onDismiss,
         title = stringResource(id = R.string.layout),
@@ -604,13 +653,13 @@ fun LayoutDialog(onDismiss: () -> Unit) {
         Column {
             NPSRadioButton(
                 text = "List",
-                selected = layout == Layout.LIST.ordinal,
-                onClick = { CoroutineScope(Dispatchers.IO).launch { prefs.changeLayout(Layout.LIST.ordinal) } },
+                selected = prefs.layout == ItemLayout.LIST.ordinal,
+                onClick = { viewModel.setLayout(ItemLayout.LIST) },
             )
             NPSRadioButton(
                 text = "Grid",
-                selected = layout == Layout.GRID.ordinal,
-                onClick = { CoroutineScope(Dispatchers.IO).launch { prefs.changeLayout(Layout.GRID.ordinal) } },
+                selected = prefs.layout == ItemLayout.GRID.ordinal,
+                onClick = { viewModel.setLayout(ItemLayout.GRID) },
             )
         }
     }

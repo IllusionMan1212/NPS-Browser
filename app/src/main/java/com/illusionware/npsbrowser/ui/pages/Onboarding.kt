@@ -2,6 +2,7 @@ package com.illusionware.npsbrowser.ui.pages
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -68,7 +69,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
@@ -77,21 +77,45 @@ import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
-import com.illusionware.npsbrowser.ConsoleType
-import com.illusionware.npsbrowser.DataType
-import com.illusionware.npsbrowser.Preferences
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.illusionware.npsbrowser.data.SettingsPreferences
+import com.illusionware.npsbrowser.model.ConsoleType
+import com.illusionware.npsbrowser.model.PackageItemType
 import com.illusionware.npsbrowser.ui.components.NPSIconButton
+import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
+import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
 import kotlinx.coroutines.launch
 
 const val PAGE_COUNT = 3
 
+val readexProFamily = FontFamily(
+    Font(R.font.readex_pro_extra_light, FontWeight.ExtraLight),
+    Font(R.font.readex_pro_light, FontWeight.Light),
+    Font(R.font.readex_pro_regular, FontWeight.Normal),
+    Font(R.font.readex_pro_medium, FontWeight.Medium),
+    Font(R.font.readex_pro_semi_bold, FontWeight.SemiBold),
+    Font(R.font.readex_pro_bold, FontWeight.Bold),
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("SourceLockedOrientationActivity")
 @Composable
-fun OnBoarding(navigateToHome: () -> Unit = {}, darkTheme: Boolean = false) {
+fun OnBoarding(
+    navigateToHome: () -> Unit = {},
+    darkTheme: Boolean = false,
+    onboardingViewModel: OnboardingViewModel = viewModel(
+        factory = OnboardingViewModel.Factory
+    ),
+    settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.Factory
+    ),
+) {
     val systemUiController = rememberSystemUiController()
     val pagerState = rememberPagerState(
         initialPage = 0,
@@ -99,13 +123,14 @@ fun OnBoarding(navigateToHome: () -> Unit = {}, darkTheme: Boolean = false) {
     )
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
 
     val darkIcons = when (pagerState.currentPage) {
         0 -> false
         else -> true
     }
 
-    DisposableEffect(systemUiController, darkIcons) {
+    DisposableEffect(systemUiController) {
         systemUiController.setStatusBarColor(
             color = Color.Transparent,
             darkIcons = darkIcons && !darkTheme
@@ -123,18 +148,48 @@ fun OnBoarding(navigateToHome: () -> Unit = {}, darkTheme: Boolean = false) {
 
     HorizontalPager(pageCount = PAGE_COUNT, state = pagerState) { page ->
         when (page) {
-            0 -> OnBoardingInitial(incrementPage = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } })
+            0 -> OnBoardingInitial(
+                incrementPage = {
+                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                },
+            )
             1 -> OnBoardingSetupTSVs(
                 page = page,
-                incrementPage = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                skipToEnd = { scope.launch { pagerState.animateScrollToPage(PAGE_COUNT - 1) } }
+                incrementPage = {
+                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                },
+                skipToEnd = {
+                    scope.launch { pagerState.animateScrollToPage(PAGE_COUNT - 1) }
+                },
+                settingsViewModel,
             )
+//            2 -> OnBoardingStoragePermission(
+//                page = page,
+//                incrementPage = {
+//                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+//                },
+//                decrementPage = {
+//                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+//                },
+//                skipToEnd = {
+//                    scope.launch { pagerState.animateScrollToPage(PAGE_COUNT - 1) }
+//                },
+//            )
             2 -> OnBoardingSetupSettings(
                 page = page,
-                incrementPage = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                decrementPage = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
-                skipToEnd = { scope.launch { pagerState.animateScrollToPage(PAGE_COUNT - 1) } },
-                navigateToHome = navigateToHome
+                incrementPage = {
+                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                },
+                decrementPage = {
+                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                },
+                skipToEnd = {
+                    scope.launch { pagerState.animateScrollToPage(PAGE_COUNT - 1) }
+                },
+                navigateToHome = navigateToHome,
+                settingsViewModel,
+                onboardingViewModel,
+                settingsPrefs,
             )
         }
     }
@@ -232,15 +287,12 @@ fun OnBoardingInitial(incrementPage: () -> Unit = {}) {
 }
 
 @Composable
-@Preview
 fun OnBoardingSetupTSVs(
     page: Int = 1,
     incrementPage: () -> Unit = {},
-    skipToEnd: () -> Unit = {}
+    skipToEnd: () -> Unit = {},
+    settingsViewModel: SettingsViewModel,
 ) {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
-
     Scaffold { padding ->
         Column(
             Modifier
@@ -291,49 +343,49 @@ fun OnBoardingSetupTSVs(
                         TSVGroup(title = "PS Vita") {
                             TSVButton(
                                 "Games",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.GAMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.GAME, it) }
                             )
                             TSVButton(
                                 "Themes",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.THEMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.THEME, it) }
                             )
                             TSVButton(
                                 "DLC",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSVITA, DataType.DLC, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.DLC, it) }
                             )
                         }
                         TSVGroup(title = "PSP") {
                             TSVButton(
                                 "Games",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSP, DataType.GAMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSP, PackageItemType.GAME, it) }
                             )
                             TSVButton(
                                 "DLC",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSP, DataType.DLC, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSP, PackageItemType.DLC, it) }
                             )
                             Box(modifier = Modifier.width(110.dp))
                         }
                         TSVGroup(title = "PS3") {
                             TSVButton(
                                 "Games",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PS3, DataType.GAMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PS3, PackageItemType.GAME, it) }
                             )
                             TSVButton(
                                 "DLC",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PS3, DataType.DLC, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PS3, PackageItemType.DLC, it) }
                             )
                             Box(modifier = Modifier.width(110.dp))
                         }
                         TSVGroup(title = "PSX") {
                             TSVButton(
                                 "Games",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSX, DataType.GAMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSX, PackageItemType.GAME, it) }
                             )
                         }
                         TSVGroup(title = "PSM") {
                             TSVButton(
                                 "Games",
-                                onFinish = { scope.launch { prefs.setTSVFile(ConsoleType.PSM, DataType.GAMES, it) }}
+                                onFinish = { settingsViewModel.setTSVFile(ConsoleType.PSM, PackageItemType.GAME, it) }
                             )
                         }
                     }
@@ -400,19 +452,24 @@ fun TSVGroup(title: String, content: @Composable RowScope.() -> Unit) {
 
 @Composable
 fun TSVButton(title: String, onFinish: (Uri) -> Unit) {
+    val context = LocalContext.current
     var hasSelected by rememberSaveable { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
+        contract = ActivityResultContracts.OpenDocument(),
     ) { fileUri ->
         if (fileUri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                fileUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
             onFinish(fileUri)
             hasSelected = true
         }
     }
     FilledTonalButton(
         onClick = {
-            filePicker.launch("text/tab-separated-values")
+            filePicker.launch(arrayOf("text/tab-separated-values"))
         },
         modifier = Modifier
             .width(110.dp)
@@ -470,34 +527,114 @@ fun TSVButton(title: String, onFinish: (Uri) -> Unit) {
     }
 }
 
+//@Composable
+//fun OnBoardingStoragePermission(
+//    page: Int = 2,
+//    incrementPage: () -> Unit = {},
+//    decrementPage: () -> Unit = {},
+//    skipToEnd: () -> Unit = {},
+//) {
+//    val hasPermission = when (PackageManager.PERMISSION_GRANTED) {
+//        ContextCompat.checkSelfPermission(
+//            LocalContext.current,
+//            Manifest.permission.WRITE_EXTERNAL_STORAGE
+//        ) -> true
+//        else -> false
+//    }
+//
+//    val permissionLegacy = rememberLauncherForActivityResult(
+//        contract = ActivityResultContracts.RequestPermission(),
+//    ) {}
+//
+//    Scaffold { padding ->
+//        Column(
+//            Modifier
+//                .padding(padding)
+//                .padding(16.dp)
+//                .fillMaxSize(),
+//            verticalArrangement = Arrangement.SpaceBetween
+//        ) {
+//            Column(
+//                Modifier
+//                    .padding(vertical = 32.dp)
+//                    .weight(1.0f)
+//                    .fillMaxHeight(),
+//                horizontalAlignment = Alignment.CenterHorizontally,
+//            ) {
+//                Image(
+//                    painter = painterResource(id = R.drawable.folder_bubbles),
+//                    contentDescription = "Folder Image",
+//                    contentScale = ContentScale.Crop,
+//                    modifier = Modifier.fillMaxWidth()
+//                )
+//                Text(
+//                    text = "Storage".uppercase(),
+//                    style = TextStyle.Default.copy(
+//                        fontWeight = FontWeight.Bold,
+//                        fontSize = 28.sp,
+//                        fontFamily = readexProFamily
+//                    ),
+//                )
+//                Spacer(modifier = Modifier.height(24.dp))
+//                Text(
+//                    "Granting storage permission allows us to bypass newer Android limitations and choose any directory as your download directory",
+//                    style = TextStyle.Default.copy(
+//                        fontSize = 20.sp,
+//                        fontFamily = readexProFamily
+//                    ),
+//                    textAlign = TextAlign.Center,
+//                )
+//                Spacer(modifier = Modifier
+//                    .fillMaxHeight()
+//                    .weight(1.0f))
+//                Button(
+//                    onClick = {
+//                        permissionLegacy.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+//                    },
+//                    modifier = Modifier.fillMaxWidth(),
+//                    enabled = !hasPermission,
+//                ) {
+//                    Text(
+//                        text = if (hasPermission) "Granted" else "Grant",
+//                        style = TextStyle.Default.copy(
+//                            fontSize = 18.sp,
+//                            fontFamily = readexProFamily
+//                        ),
+//                    )
+//                }
+//            }
+//            Column(Modifier.fillMaxWidth()) {
+//                OnBoardingBottomButtons(
+//                    page = page,
+//                    incrementPage = incrementPage,
+//                    decrementPage = decrementPage,
+//                    skipToEnd = skipToEnd
+//                )
+//            }
+//        }
+//    }
+//}
+
 @Composable
-@Preview
 fun OnBoardingSetupSettings(
     page: Int = 2,
     incrementPage: () -> Unit = {},
     decrementPage: () -> Unit = {},
     skipToEnd: () -> Unit = {},
     navigateToHome: () -> Unit = {},
+    settingsViewModel: SettingsViewModel,
+    onboardingViewModel: OnboardingViewModel,
+    settingsPrefs: SettingsPreferences,
 ) {
     val clipboard = LocalClipboardManager.current
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
 
     var hmacKey by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
-    var pkg2zipArgs = prefs.pkg2zipParams.collectAsState(initial = "").value
-    val downloadDir = prefs.downloadDir.collectAsState(initial = "").value
-    val unpackDir = prefs.unpackDir.collectAsState(initial = "").value
-    val unpackInDownload = prefs.unpackInDownload.collectAsState(initial = false).value
-    val deleteAfterUnpack = prefs.deleteAfterUnpack.collectAsState(initial = false).value
-    val autoDecrypt = prefs.pkg2zipAutoDecrypt.collectAsState(initial = true).value
 
     val downloadDirPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { dirUri ->
         if (dirUri != null) {
-            scope.launch {
-                prefs.setDownloadDir(dirUri.toString())
-            }
+            settingsViewModel.setDownloadDir(dirUri.toString())
         }
     }
 
@@ -505,17 +642,13 @@ fun OnBoardingSetupSettings(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { dirUri ->
         if (dirUri != null) {
-            scope.launch {
-                prefs.setUnpackDir(dirUri.toString())
-            }
+            settingsViewModel.setUnpackDir(dirUri.toString())
         }
     }
 
     fun setHmacKey(key: String) {
         if (key.isNotEmpty()) {
-            scope.launch {
-                prefs.setHMACKey(key)
-            }
+            settingsViewModel.setHMACKey(key)
         }
     }
 
@@ -592,20 +725,16 @@ fun OnBoardingSetupSettings(
                         Column {
                             Toggleable(
                                 title = "Unpack in download directory",
-                                checked = unpackInDownload,
+                                checked = settingsPrefs.unpackInDownload,
                                 onCheckedChange = {
-                                    scope.launch {
-                                        prefs.setUnpackInDownload(it)
-                                    }
+                                    settingsViewModel.setUnpackInDownload(it)
                                 },
                             )
                             Toggleable(
                                 title = "Delete package after unpacking",
-                                checked = deleteAfterUnpack,
+                                checked = settingsPrefs.deleteAfterUnpack,
                                 onCheckedChange = {
-                                    scope.launch {
-                                        prefs.setDeleteAfterUnpack(it)
-                                    }
+                                    settingsViewModel.setDeleteAfterUnpack(it)
                                 },
                             )
                             Box(
@@ -618,7 +747,7 @@ fun OnBoardingSetupSettings(
                                         text = "Download Directory",
                                     )
                                     Text(
-                                        text = Uri.decode(downloadDir).ifEmpty { "None" },
+                                        text = Uri.decode(settingsPrefs.downloadDir).ifEmpty { "None" },
                                         color = MaterialTheme.colorScheme.outline,
                                     )
                                 }
@@ -633,7 +762,7 @@ fun OnBoardingSetupSettings(
                                         text = "Unpack Directory",
                                     )
                                     Text(
-                                        text = Uri.decode(unpackDir).ifEmpty { "None" },
+                                        text = Uri.decode(settingsPrefs.unpackDir).ifEmpty { "None" },
                                         color = MaterialTheme.colorScheme.outline,
                                     )
                                 }
@@ -648,23 +777,18 @@ fun OnBoardingSetupSettings(
                         )
                         Toggleable(
                             title = "Automatically decrypt downloaded content",
-                            checked = autoDecrypt,
+                            checked = settingsPrefs.pkg2zipAutoDecrypt,
                             onCheckedChange = {
-                                scope.launch {
-                                    prefs.setPkg2zipAutoDecrypt(it)
-                                }
+                                settingsViewModel.setPkg2zipAutoDecrypt(it)
                             },
                         )
                         OutlinedTextField(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                            value = pkg2zipArgs,
+                            value = settingsPrefs.pkg2zipParams,
                             onValueChange = {
-                                pkg2zipArgs = it
-                                scope.launch {
-                                    prefs.setPkg2zipParams(it)
-                                }
+                                settingsViewModel.setPkg2zipParams(it)
                             }, // TODO: validate args are legal ??
                             label = { Text(text = "Pkg2zip args") },
                             placeholder = { Text(text = "-x {pkgFile} \"{zRifKey}\"") },
@@ -679,7 +803,9 @@ fun OnBoardingSetupSettings(
                         incrementPage = incrementPage,
                         decrementPage = decrementPage,
                         skipToEnd = skipToEnd,
-                        navigateToHome = navigateToHome
+                        navigateToHome = navigateToHome,
+                        settingsViewModel = settingsViewModel,
+                        onboardingViewModel = onboardingViewModel,
                     )
                 }
             }
@@ -714,17 +840,18 @@ fun OnBoardingBottomButtons(
     decrementPage: () -> Unit = {},
     skipToEnd: () -> Unit = {},
     navigateToHome: () -> Unit = {},
+    settingsViewModel: SettingsViewModel? = null,
+    onboardingViewModel: OnboardingViewModel? = null
 ) {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
+    val finalPage = PAGE_COUNT - 1
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.1f),
-        horizontalArrangement = if (page != 2) Arrangement.SpaceBetween else Arrangement.End,
+        horizontalArrangement = if (page != finalPage) Arrangement.SpaceBetween else Arrangement.End,
     ) {
-        if (page == 1) {
+        if (page != finalPage) {
             FilledTonalButton(
                 onClick = skipToEnd,
                 colors = ButtonDefaults.filledTonalButtonColors(
@@ -741,13 +868,11 @@ fun OnBoardingBottomButtons(
                     Text(text = "Prev")
                 }
             }
-            if (page == 2) {
+            if (page == finalPage) {
                 Button(
                     onClick = {
                         navigateToHome()
-                        scope.launch {
-                            prefs.finishOnboarding()
-                        }
+                        onboardingViewModel?.finishOnboarding(settingsViewModel!!.shouldCreateDefaultDir())
                     },
                     contentPadding = PaddingValues(horizontal = 18.dp)
                 ) {

@@ -1,5 +1,6 @@
 package com.illusionware.npsbrowser.ui.pages
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,16 +23,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.outlined.ArrowCircleDown
-import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.ArrowOutward
-import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.SubdirectoryArrowRight
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,11 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,28 +52,37 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.illusionware.npsbrowser.ConsoleType
-import com.illusionware.npsbrowser.DataType
-import com.illusionware.npsbrowser.Preferences
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.ui.components.NPSAlertDialog
 import com.illusionware.npsbrowser.ui.components.NPSIconButton
 import com.illusionware.npsbrowser.ui.components.NPSRadioButton
 import com.illusionware.npsbrowser.ui.theme.ColorSecondaryLight
 import com.illusionware.npsbrowser.ui.theme.Typography
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.illusionware.npsbrowser.data.SettingsPreferences
+import com.illusionware.npsbrowser.data.Theme
+import com.illusionware.npsbrowser.model.ConsoleType
+import com.illusionware.npsbrowser.model.PackageItemType
 
-val Themes = hashMapOf(
-    0 to "Light",
-    1 to "Dark",
-    2 to "Use System Theme"
+private val Themes = hashMapOf(
+    Theme.LIGHT.ordinal to "Light",
+    Theme.DARK.ordinal to "Dark",
+    Theme.SYSTEM.ordinal to "Use System Theme"
 )
 
 @Composable
 @Preview
-fun SettingsScreen(navigationGoBack: () -> Unit = {}, onThemeChange: (v: Int) -> Unit = {}) {
+fun SettingsScreen(
+    navigationGoBack: () -> Unit = {},
+    viewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.Factory
+    )
+) {
+    val prefs = viewModel.uiState.collectAsStateWithLifecycle().value
+
     Scaffold (
         topBar = {
             Row(
@@ -102,11 +104,11 @@ fun SettingsScreen(navigationGoBack: () -> Unit = {}, onThemeChange: (v: Int) ->
             .verticalScroll(rememberScrollState())
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(vertical = 16.dp)) {
-                Appearance(onThemeChange)
-                TsvFiles()
-                Updates()
-                Downloads()
-                Pkg2Zip()
+                Appearance(viewModel, prefs)
+                TsvFiles(viewModel, prefs)
+                Updates(viewModel, prefs)
+                Downloads(viewModel, prefs)
+                Pkg2Zip(viewModel, prefs)
             }
         }
 
@@ -114,83 +116,63 @@ fun SettingsScreen(navigationGoBack: () -> Unit = {}, onThemeChange: (v: Int) ->
 }
 
 @Composable
-fun Appearance(onThemeChange: (v: Int) -> Unit) {
-    val prefs = Preferences(LocalContext.current)
-    val theme = prefs.theme.collectAsState(initial = 0)
-
+fun Appearance(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
     var themeOpenDialog by remember { mutableStateOf(false) }
 
     SettingGroup(title = stringResource(id = R.string.appearance)) {
         DialogSetting(
             title = stringResource(id = R.string.theme),
-            value = Themes[theme.value] ?: "None",
+            value = Themes[prefs.appTheme] ?: "None",
             icon = Icons.Outlined.Palette,
             onClick = { themeOpenDialog = true }
         )
     }
     if (themeOpenDialog) {
         ThemeDialog(
+            prefs = prefs,
             onDismiss = { themeOpenDialog = false },
-            onThemeChange = onThemeChange
+            onThemeChange = {
+                viewModel.setTheme(it)
+            }
         )
     }
 }
 
 @Composable
-fun TsvFiles() {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
-
+fun TsvFiles(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
     var expanded by remember { mutableStateOf(false) }
-    val psvGames = prefs.psvGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val psvDlc = prefs.psvDLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val psvThemes = prefs.psvThemes.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val ps3Games = prefs.ps3Games.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val ps3Dlc = prefs.ps3DLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val pspGames = prefs.pspGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val pspDlc = prefs.pspDLC.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val psxGames = prefs.psxGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
-    val psmGames = prefs.psmGames.collectAsState(initial = "").value.ifEmpty { "Browse" }
 
     SettingGroup(title = "TSV Files") {
         TSVPicker(
             title = "PSV Games",
-            value = Uri.decode(psvGames),
+            value = Uri.decode(prefs.psvGames.ifEmpty { "Browse" }),
             icon = painterResource(id = R.drawable.vita_icon),
             onFilePick = {
-                scope.launch(Dispatchers.IO) {
-                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.GAMES, it)
-                }
+                viewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.GAME, it)
             }
         )
         TSVPicker(
             title = "PSV DLC",
-            value = Uri.decode(psvDlc),
+            value = Uri.decode(prefs.psvDlc.ifEmpty { "Browse" }),
             icon = null,
             onFilePick = {
-                scope.launch(Dispatchers.IO) {
-                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.DLC, it)
-                }
+                viewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.DLC, it)
             }
         )
         TSVPicker(
             title = "PSV Themes",
-            value = Uri.decode(psvThemes),
+            value = Uri.decode(prefs.psvThemes.ifEmpty { "Browse" }),
             icon = null,
             onFilePick = {
-                scope.launch(Dispatchers.IO) {
-                    prefs.setTSVFile(ConsoleType.PSVITA, DataType.THEMES, it)
-                }
+                viewModel.setTSVFile(ConsoleType.PSVITA, PackageItemType.THEME, it)
             },
         )
         TSVPicker(
             title = "PS3 Games",
-            value = Uri.decode(ps3Games),
+            value = Uri.decode(prefs.ps3Games).ifEmpty { "Browse" },
             icon = painterResource(id = R.drawable.ps3_icon),
             onFilePick = {
-                scope.launch(Dispatchers.IO) {
-                    prefs.setTSVFile(ConsoleType.PS3, DataType.GAMES, it)
-                }
+                viewModel.setTSVFile(ConsoleType.PS3, PackageItemType.GAME, it)
             }
         )
         if (!expanded) {
@@ -209,52 +191,42 @@ fun TsvFiles() {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TSVPicker(
                     title = "PS3 DLC",
-                    value = Uri.decode(ps3Dlc),
+                    value = Uri.decode(prefs.ps3Dlc).ifEmpty { "Browse" },
                     icon = null,
                     onFilePick = {
-                        scope.launch(Dispatchers.IO) {
-                            prefs.setTSVFile(ConsoleType.PS3, DataType.DLC, it)
-                        }
+                        viewModel.setTSVFile(ConsoleType.PS3, PackageItemType.DLC, it)
                     }
                 )
                 TSVPicker(
                     title = "PSP Games",
-                    value = Uri.decode(pspGames),
+                    value = Uri.decode(prefs.pspGames).ifEmpty { "Browse" },
                     icon = painterResource(id = R.drawable.psp_icon),
                     onFilePick = {
-                        scope.launch(Dispatchers.IO) {
-                            prefs.setTSVFile(ConsoleType.PSP, DataType.GAMES, it)
-                        }
+                        viewModel.setTSVFile(ConsoleType.PSP, PackageItemType.GAME, it)
                     }
                 )
                 TSVPicker(
                     title = "PSP DLC",
-                    value = Uri.decode(pspDlc),
+                    value = Uri.decode(prefs.pspDlc).ifEmpty { "Browse" },
                     icon = null,
                     onFilePick = {
-                        scope.launch(Dispatchers.IO) {
-                            prefs.setTSVFile(ConsoleType.PSP, DataType.DLC, it)
-                        }
+                        viewModel.setTSVFile(ConsoleType.PSP, PackageItemType.DLC, it)
                     }
                 )
                 TSVPicker(
                     title = "PSX Games",
-                    value = Uri.decode(psxGames),
+                    value = Uri.decode(prefs.psxGames).ifEmpty { "Browse" },
                     icon = painterResource(id = R.drawable.psx_icon),
                     onFilePick = {
-                        scope.launch(Dispatchers.IO) {
-                            prefs.setTSVFile(ConsoleType.PSX, DataType.GAMES, it)
-                        }
+                        viewModel.setTSVFile(ConsoleType.PSX, PackageItemType.GAME, it)
                     }
                 )
                 TSVPicker(
                     title = "PSM Games",
-                    value = Uri.decode(psmGames),
+                    value = Uri.decode(prefs.psmGames).ifEmpty { "Browse" },
                     icon = painterResource(id = R.drawable.psm_icon),
                     onFilePick = {
-                        scope.launch(Dispatchers.IO) {
-                            prefs.setTSVFile(ConsoleType.PSM, DataType.GAMES, it)
-                        }
+                        viewModel.setTSVFile(ConsoleType.PSM, PackageItemType.GAME, it)
                     }
                 )
             }
@@ -269,10 +241,16 @@ fun TSVPicker(
     icon: Painter? = null,
     onFilePick: (Uri) -> Unit,
 ) {
+    val context = LocalContext.current
+
     val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
+        contract = ActivityResultContracts.OpenDocument(),
     ) { fileUri ->
         if (fileUri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                fileUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
             onFilePick(fileUri)
         }
     }
@@ -282,28 +260,25 @@ fun TSVPicker(
         value = value,
         icon = icon,
         onClick = {
-            filePicker.launch("text/tab-separated-values")
+            filePicker.launch(arrayOf("text/tab-separated-values"))
         }
     )}
 
 @Composable
-fun Updates() {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
+fun Updates(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
     val clipboard = LocalClipboardManager.current
 
-    val hmacKey = prefs.hmacKey.collectAsState(initial = "").value
     var hmacOpenDialog by remember { mutableStateOf(false) }
     var dialogHmacKey by remember { mutableStateOf("") }
 
     SideEffect {
-        dialogHmacKey = hmacKey
+        dialogHmacKey = prefs.hmacKey
     }
 
     SettingGroup(title = "Updates") {
         DialogSetting(
             title = "HMAC Key",
-            value = hmacKey.ifEmpty { "None" },
+            value = prefs.hmacKey.ifEmpty { "None" },
             icon = Icons.Outlined.Key,
             onClick = { hmacOpenDialog = true }
         )
@@ -317,9 +292,7 @@ fun Updates() {
                     Text(text = "Cancel")
                 }
                 TextButton(onClick = {
-                    scope.launch {
-                        prefs.setHMACKey(dialogHmacKey)
-                    }
+                    viewModel.setHMACKey(dialogHmacKey)
                     hmacOpenDialog = false
                 }) {
                     Text(text = "OK")
@@ -349,21 +322,12 @@ fun Updates() {
 }
 
 @Composable
-fun Downloads() {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
-    val downloadDir = prefs.downloadDir.collectAsState(initial = "").value
-    val unpackDir = prefs.unpackDir.collectAsState(initial = "").value
-    val unpackInDownload = prefs.unpackInDownload.collectAsState(initial = false).value
-    val deleteAfterUnpack = prefs.deleteAfterUnpack.collectAsState(initial = false).value
-
+fun Downloads(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
     val downloadDirPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { dirUri ->
         if (dirUri != null) {
-            scope.launch {
-                prefs.setDownloadDir(dirUri.toString())
-            }
+            viewModel.setDownloadDir(dirUri.toString())
         }
     }
 
@@ -371,34 +335,28 @@ fun Downloads() {
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { dirUri ->
         if (dirUri != null) {
-            scope.launch {
-                prefs.setUnpackDir(dirUri.toString())
-            }
+            viewModel.setUnpackDir(dirUri.toString())
         }
     }
 
     SettingGroup(title = "Downloads") {
         ToggleSetting(
             title = "Unpack in Download Directory",
-            checked = unpackInDownload,
+            checked = prefs.unpackInDownload,
             onClick = {
-                scope.launch {
-                    prefs.setUnpackInDownload(it)
-                }
+                viewModel.setUnpackInDownload(it)
             }
         )
         ToggleSetting(
             title = "Delete package after unpacking",
-            checked = deleteAfterUnpack,
+            checked = prefs.deleteAfterUnpack,
             onClick = {
-                scope.launch {
-                    prefs.setDeleteAfterUnpack(it)
-                }
+                viewModel.setDeleteAfterUnpack(it)
             }
         )
         DialogSetting(
             title = "Download Directory",
-            value = Uri.decode(downloadDir),
+            value = Uri.decode(prefs.downloadDir).ifEmpty { "None" },
             icon = Icons.Outlined.FileDownload,
             onClick = {
                 downloadDirPicker.launch(Uri.EMPTY)
@@ -406,7 +364,7 @@ fun Downloads() {
         )
         DialogSetting(
             title = "Unpack Directory",
-            value = Uri.decode(unpackDir),
+            value = Uri.decode(prefs.unpackDir).ifEmpty { "None" },
             icon = Icons.Outlined.Unarchive,
             onClick = {
                 unpackDirPicker.launch(Uri.EMPTY)
@@ -416,32 +374,25 @@ fun Downloads() {
 }
 
 @Composable
-fun Pkg2Zip() {
-    val prefs = Preferences(LocalContext.current)
-    val scope = rememberCoroutineScope()
-
-    val autoDecrypt = prefs.pkg2zipAutoDecrypt.collectAsState(initial = true).value
-    val pkg2zipParams = prefs.pkg2zipParams.collectAsState(initial = "").value
+fun Pkg2Zip(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
     var pkg2zipOpenDialog by remember { mutableStateOf(false) }
     var dialogPkg2zipParams by remember { mutableStateOf("") }
 
     SideEffect {
-        dialogPkg2zipParams = pkg2zipParams
+        dialogPkg2zipParams = prefs.pkg2zipParams
     }
 
     SettingGroup(title = "Pkg2Zip") {
         ToggleSetting(
             title = "Automatically decrypt downloaded content",
-            checked = autoDecrypt,
+            checked = prefs.pkg2zipAutoDecrypt,
             onClick = {
-                scope.launch {
-                    prefs.setPkg2zipAutoDecrypt(it)
-                }
+                viewModel.setPkg2zipAutoDecrypt(it)
             }
         )
         DialogSetting(
             title = "Decryption params",
-            value = pkg2zipParams.ifEmpty { "None" },
+            value = prefs.pkg2zipParams.ifEmpty { "None" },
             icon = painterResource(
                 id = R.drawable.lock_open
             ),
@@ -457,9 +408,7 @@ fun Pkg2Zip() {
                     Text(text = "Cancel")
                 }
                 TextButton(onClick = {
-                    scope.launch {
-                        prefs.setPkg2zipParams(dialogPkg2zipParams)
-                    }
+                    viewModel.setPkg2zipParams(dialogPkg2zipParams)
                     pkg2zipOpenDialog = false
                 }) {
                     Text(text = "OK")
@@ -478,10 +427,11 @@ fun Pkg2Zip() {
 }
 
 @Composable
-fun ThemeDialog(onDismiss: () -> Unit, onThemeChange: (v: Int) -> Unit) {
-    val prefs = Preferences(LocalContext.current)
-    val theme = prefs.theme.collectAsState(initial = "")
-
+fun ThemeDialog(
+    prefs: SettingsPreferences,
+    onDismiss: () -> Unit,
+    onThemeChange: (v: Theme) -> Unit
+) {
     NPSAlertDialog(
         onDismiss = onDismiss,
         title = stringResource(id = R.string.theme),
@@ -495,27 +445,24 @@ fun ThemeDialog(onDismiss: () -> Unit, onThemeChange: (v: Int) -> Unit) {
         Column {
             NPSRadioButton(
                 text = "Light",
-                onClick = { CoroutineScope(Dispatchers.IO).launch {
-                    onThemeChange(0)
-                    prefs.changeTheme(0) }
+                onClick = {
+                    onThemeChange(Theme.LIGHT)
                 },
-                selected = theme.value == 0,
+                selected = prefs.appTheme == Theme.LIGHT.ordinal,
             )
             NPSRadioButton(
                 text = "Dark",
-                onClick = { CoroutineScope(Dispatchers.IO).launch {
-                    onThemeChange(1)
-                    prefs.changeTheme(1) }
+                onClick = {
+                    onThemeChange(Theme.DARK)
                 },
-                selected = theme.value == 1,
+                selected = prefs.appTheme == Theme.DARK.ordinal,
             )
             NPSRadioButton(
                 text = "Use System Theme",
-                onClick = { CoroutineScope(Dispatchers.IO).launch {
-                    onThemeChange(2)
-                    prefs.changeTheme(2) }
+                onClick = {
+                    onThemeChange(Theme.SYSTEM)
                 },
-                selected = theme.value == 2,
+                selected = prefs.appTheme == Theme.SYSTEM.ordinal,
             )
         }
     }
@@ -553,9 +500,9 @@ fun DialogSetting(title: String, value: String, icon: Painter?, onClick: () -> U
             } else {
                 Box(modifier = Modifier.width(56.dp))
             }
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = title, color = MaterialTheme.colorScheme.onBackground)
-                Text(text = value, color = ColorSecondaryLight)
+                Text(text = value, color = ColorSecondaryLight, fontSize = 14.sp)
             }
         }
     }
@@ -583,11 +530,12 @@ fun DialogSetting(
             } else {
                 Box(modifier = Modifier.width(56.dp))
             }
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = title, color = MaterialTheme.colorScheme.onBackground)
                 Text(
                     text = value,
                     color = ColorSecondaryLight,
+                    fontSize = 14.sp,
                     maxLines = if (singleLine) 1 else Int.MAX_VALUE,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(end = 24.dp)
