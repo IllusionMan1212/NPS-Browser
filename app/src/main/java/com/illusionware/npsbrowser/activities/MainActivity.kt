@@ -88,8 +88,8 @@ import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItem
 import com.illusionware.npsbrowser.ui.components.*
-import com.illusionware.npsbrowser.ui.pages.OnBoarding
-import com.illusionware.npsbrowser.ui.pages.SettingsScreen
+import com.illusionware.npsbrowser.ui.screens.OnBoarding
+import com.illusionware.npsbrowser.ui.screens.SettingsScreen
 import com.illusionware.npsbrowser.ui.theme.ColorAccent
 import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
 import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme

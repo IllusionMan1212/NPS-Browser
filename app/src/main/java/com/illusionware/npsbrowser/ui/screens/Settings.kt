@@ -1,4 +1,4 @@
-package com.illusionware.npsbrowser.ui.pages
+package com.illusionware.npsbrowser.ui.screens
 
 import android.content.Intent
 import android.net.Uri
