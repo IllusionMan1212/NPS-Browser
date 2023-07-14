@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.internal.toLongOrDefault
 import java.io.InputStream
@@ -27,10 +28,13 @@ data class PackageListUiState(
     val packages: ArrayList<PackageItem> = ArrayList(),
     val error: String = "",
     val isLoading: Boolean = true,
+    val isSearchOpen: Boolean = false,
+    val searchQuery: String = "",
 )
 
 class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesRepository): ViewModel() {
     private val _uiState = MutableStateFlow(PackageListUiState())
+    private val immutablePackages = ArrayList<PackageItem>()
     val uiState: StateFlow<PackageListUiState> = _uiState.asStateFlow()
 
     private val tsvReader = csvReader {
@@ -52,6 +56,7 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
             list.sortBy { it.name }
 
             _uiState.emit(PackageListUiState(isLoading = false, packages = list))
+            immutablePackages.addAll(list)
 
             settingsRepo.tsvFiles().collect { tsv ->
                 _uiState.emit(PackageListUiState())
@@ -70,7 +75,42 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
                 list.sortBy { it.name }
 
                 _uiState.emit(PackageListUiState(isLoading = false, packages = list))
+
+                immutablePackages.addAll(list)
             }
+        }
+    }
+
+    fun search(query: String) {
+        _uiState.update {
+            it.copy(
+                packages = immutablePackages.filter { item ->
+                    item.name.contains(query, true)
+                } as ArrayList<PackageItem>,
+                searchQuery = query
+            )
+        }
+    }
+
+    fun openSearch() {
+        _uiState.update {
+            it.copy(isSearchOpen = true)
+        }
+    }
+
+    fun closeSearch() {
+        _uiState.update {
+            it.copy(
+                packages = immutablePackages,
+                searchQuery = "",
+                isSearchOpen = false
+            )
+        }
+    }
+
+    fun clearSearch() {
+        _uiState.update {
+            it.copy(packages = immutablePackages, searchQuery = "")
         }
     }
 

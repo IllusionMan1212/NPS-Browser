@@ -189,15 +189,17 @@ fun HomePage(
     navigateToDetailsScreen: (item: PackageItem) -> Unit,
     settingsPrefs: SettingsPreferences,
     settingsViewModel: SettingsViewModel,
+    packageListViewModel: PackageListViewModel = viewModel(
+        factory = PackageListViewModel.Factory
+    ),
 ) {
-    var isSearchOpen by rememberSaveable { mutableStateOf(false)}
-    var searchQuery by rememberSaveable { mutableStateOf("")}
     val searchBar = remember { FocusRequester() }
     var layoutDialogOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val systemUiController = rememberSystemUiController()
     val navbarScrimColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
 
+    val uiState = packageListViewModel.uiState.collectAsStateWithLifecycle().value
     val tsvs = settingsViewModel.availableTsvs()
     var selectedBarItem by rememberSaveable { mutableStateOf(ConsoleType.PSVITA) }
 
@@ -215,22 +217,26 @@ fun HomePage(
         topBar = {
             TopAppBar(
                 title = {
-                    if (!isSearchOpen) {
+                    if (!uiState.isSearchOpen) {
                         Text(text = stringResource(id = R.string.app_name))
                     }
                 },
                 actions = {
-                    if (isSearchOpen) {
+                    if (uiState.isSearchOpen) {
                         NPSIconButton(
                             tooltip = "Close Search",
-                            onClick = { isSearchOpen = false }
+                            onClick = {
+                                packageListViewModel.closeSearch()
+                            }
                         ){
                             Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Close Search")
                         }
                         Spacer(Modifier.width(12.dp))
                         TextField(
-                            value = searchQuery,
-                            onValueChange = {str -> searchQuery = str},
+                            value = uiState.searchQuery,
+                            onValueChange = {
+                                packageListViewModel.search(it)
+                            },
                             Modifier
                                 .weight(1.0f)
                                 .focusRequester(searchBar),
@@ -248,10 +254,12 @@ fun HomePage(
                             ),
                         )
                         Spacer(Modifier.width(12.dp))
-                        if (searchQuery.isNotEmpty()) {
+                        if (uiState.searchQuery.isNotEmpty()) {
                             NPSIconButton(
                                 tooltip = "Clear Search",
-                                onClick = { searchQuery = "" }
+                                onClick = {
+                                    packageListViewModel.clearSearch()
+                                }
                             ){
                                 Icon(imageVector = Icons.Filled.Close, contentDescription = "Clear Search")
                             }
@@ -261,10 +269,10 @@ fun HomePage(
                             searchBar.requestFocus()
                         }
                     }
-                    if (!isSearchOpen) {
+                    if (!uiState.isSearchOpen) {
                         NPSIconButton(
                             tooltip = stringResource(id = R.string.search_tooltip),
-                            onClick = { isSearchOpen = true }
+                            onClick = { packageListViewModel.openSearch() }
                         ){
                             Icon(imageVector = Icons.Filled.Search, contentDescription = stringResource(
                                 id = R.string.search_tooltip
@@ -306,7 +314,8 @@ fun HomePage(
                 PackageList(
                     navigateToDetailsScreen = navigateToDetailsScreen,
                     type = selectedBarItem,
-                    settingsPrefs = settingsPrefs
+                    settingsPrefs = settingsPrefs,
+                    viewModel = packageListViewModel,
                 )
             }
         }
@@ -318,6 +327,18 @@ fun HomePage(
                 viewModel = settingsViewModel,
             )
         }
+    }
+}
+
+@Composable
+fun NoResults() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = "No results found", color = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -411,9 +432,7 @@ fun NoTsvs(padding: PaddingValues = PaddingValues(0.dp), navigateToSettings: () 
 fun PackageList(
     type: ConsoleType = ConsoleType.PSVITA,
     navigateToDetailsScreen: (item: PackageItem) -> Unit,
-    viewModel: PackageListViewModel = viewModel(
-        factory = PackageListViewModel.Factory
-    ),
+    viewModel: PackageListViewModel,
     settingsPrefs: SettingsPreferences,
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -447,7 +466,7 @@ fun PackageList(
                 CircularProgressIndicator()
             }
         } else {
-            if (packages.isEmpty()) {
+            if (packages.isEmpty() && uiState.searchQuery.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -461,6 +480,8 @@ fun PackageList(
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
+            } else if (packages.isEmpty() && uiState.searchQuery.isNotEmpty()) {
+                NoResults()
             } else {
                 if (settingsPrefs.layout == ItemLayout.LIST.ordinal) {
                     LazyColumn {
