@@ -40,7 +40,6 @@ data class SettingsPreferences(
     val ps3Dlc: String,
     val pspDlc: String,
     val psvThemes: String,
-    val hmacKey: String,
     val downloadDir: String,
     val unpackDir: String,
     val unpackInDownload: Boolean,
@@ -64,7 +63,6 @@ class SettingsPreferencesRepository(
         private val PS3_DLC = stringPreferencesKey("ps3_dlc")
         private val PSP_DLC = stringPreferencesKey("psp_dlc")
         private val PSV_THEMES = stringPreferencesKey("psv_themes")
-        private val HMAC_KEY = stringPreferencesKey("hmac_key")
         private val DOWNLOAD_DIR = stringPreferencesKey("download_dir")
         private val UNPACK_DIR = stringPreferencesKey("unpack_dir")
         private val UNPACK_IN_DOWNLOAD = booleanPreferencesKey("unpack_in_download")
@@ -105,12 +103,6 @@ class SettingsPreferencesRepository(
     suspend fun setLayout(layout: ItemLayout) {
         dataStore.edit { prefs ->
             prefs[LAYOUT] = layout.ordinal
-        }
-    }
-
-    suspend fun setHMACKey(key: String) {
-        dataStore.edit { prefs ->
-            prefs[HMAC_KEY] = key
         }
     }
 
@@ -207,7 +199,6 @@ class SettingsPreferencesRepository(
             prefs[PS3_DLC] ?: "",
             prefs[PSP_DLC] ?: "",
             prefs[PSV_THEMES] ?: "",
-            prefs[HMAC_KEY] ?: "",
             prefs[DOWNLOAD_DIR] ?: defaultDownloadDir,
             prefs[UNPACK_DIR] ?: defaultDownloadDir,
             prefs[UNPACK_IN_DOWNLOAD] ?: false,

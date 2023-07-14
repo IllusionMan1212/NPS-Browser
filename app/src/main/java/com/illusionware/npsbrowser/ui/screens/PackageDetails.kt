@@ -443,7 +443,6 @@ fun BottomSheetPreview() {
         "",
         "",
         "",
-        "",
         false,
         false,
         "",

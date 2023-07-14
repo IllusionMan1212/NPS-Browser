@@ -38,7 +38,6 @@ class SettingsViewModel(private val settingsPrefsRepo: SettingsPreferencesReposi
             "",
             "",
             "",
-            "",
             false,
             false,
             "",
@@ -82,12 +81,6 @@ class SettingsViewModel(private val settingsPrefsRepo: SettingsPreferencesReposi
     fun setLayout(layout: ItemLayout) {
         viewModelScope.launch(Dispatchers.IO) {
             settingsPrefsRepo.setLayout(layout)
-        }
-    }
-
-    fun setHMACKey(hmacKey: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            settingsPrefsRepo.setHMACKey(hmacKey)
         }
     }
 

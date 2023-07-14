@@ -63,7 +63,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -74,20 +73,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItemType
-import com.illusionware.npsbrowser.ui.components.NPSIconButton
 import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
 import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -626,10 +621,6 @@ fun OnBoardingSetupSettings(
     onboardingViewModel: OnboardingViewModel,
     settingsPrefs: SettingsPreferences,
 ) {
-    val clipboard = LocalClipboardManager.current
-
-    var hmacKey by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
-
     val downloadDirPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { dirUri ->
@@ -643,12 +634,6 @@ fun OnBoardingSetupSettings(
     ) { dirUri ->
         if (dirUri != null) {
             settingsViewModel.setUnpackDir(dirUri.toString())
-        }
-    }
-
-    fun setHmacKey(key: String) {
-        if (key.isNotEmpty()) {
-            settingsViewModel.setHMACKey(key)
         }
     }
 
@@ -685,37 +670,6 @@ fun OnBoardingSetupSettings(
                         .padding(vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                    ColumnGroup(title = "HMAC Key", modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Text(
-                            text = "The HMAC Key is used to decrypt the PS Vita game updates' urls. We cannot provide this key since it's the property of Sony",
-                            style = Typography.bodyMedium.copy(color = MaterialTheme.colorScheme.outline),
-                        )
-                        OutlinedTextField(
-                            value = hmacKey,
-                            onValueChange = {
-                                hmacKey = it
-                                setHmacKey(it.text)
-                            },
-                            label = { Text(text = "HMAC Key") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            trailingIcon = {
-                                NPSIconButton(
-                                    tooltip = "Paste",
-                                    onClick = {
-                                        val text = clipboard.getText()?.text ?: ""
-                                        hmacKey = TextFieldValue(text, selection = TextRange(text.length))
-                                        setHmacKey(text)
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.ContentPaste,
-                                        contentDescription = "Paste",
-                                    )
-                                }
-                            }
-                        )
-                    }
                     ColumnGroup(title = "Downloads", titleModifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(
                             modifier = Modifier.padding(horizontal = 16.dp),

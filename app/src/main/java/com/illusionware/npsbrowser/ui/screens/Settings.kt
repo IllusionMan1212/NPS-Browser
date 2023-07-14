@@ -24,10 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.Icon
@@ -48,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -115,7 +112,6 @@ fun SettingsScreen(
             ) {
                 Appearance(viewModel, prefs)
                 TsvFiles(viewModel, prefs)
-                Updates(viewModel, prefs)
                 Downloads(viewModel, prefs)
                 Pkg2Zip(viewModel, prefs)
             }
@@ -271,63 +267,7 @@ fun TSVPicker(
         onClick = {
             filePicker.launch(arrayOf("text/tab-separated-values"))
         }
-    )}
-
-@Composable
-fun Updates(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
-    val clipboard = LocalClipboardManager.current
-
-    var hmacOpenDialog by remember { mutableStateOf(false) }
-    var dialogHmacKey by remember { mutableStateOf("") }
-
-    SideEffect {
-        dialogHmacKey = prefs.hmacKey
-    }
-
-    SettingGroup(title = "Updates") {
-        DialogSetting(
-            title = "HMAC Key",
-            value = prefs.hmacKey.ifEmpty { "None" },
-            icon = Icons.Outlined.Key,
-            onClick = { hmacOpenDialog = true }
-        )
-    }
-    if (hmacOpenDialog) {
-        NPSAlertDialog(
-            onDismiss = { hmacOpenDialog = false },
-            title = "HMAC Key",
-            buttons = {
-                TextButton(onClick = { hmacOpenDialog = false }) {
-                    Text(text = "Cancel")
-                }
-                TextButton(onClick = {
-                    viewModel.setHMACKey(dialogHmacKey)
-                    hmacOpenDialog = false
-                }) {
-                    Text(text = "OK")
-                }
-            }
-        ) {
-            OutlinedTextField(
-                value = dialogHmacKey,
-                onValueChange = { dialogHmacKey = it },
-                label = { Text(text = "HMAC Key") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                trailingIcon = {
-                    NPSIconButton(
-                        tooltip = "Paste",
-                        onClick = { dialogHmacKey = clipboard.getText()?.text ?: "" }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ContentPaste,
-                            contentDescription = "Paste",
-                        )
-                    }
-                }
-            )
-        }
-    }
+    )
 }
 
 @Composable
