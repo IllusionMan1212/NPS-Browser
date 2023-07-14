@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -43,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -98,12 +101,18 @@ fun SettingsScreen(
                 Text(text = stringResource(id = R.string.title_activity_settings), style = Typography.titleLarge)
             }
         },
+        contentWindowInsets = WindowInsets(bottom = 0.dp),
     ) { padding ->
         Column(modifier = Modifier
             .padding(padding)
             .verticalScroll(rememberScrollState())
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(vertical = 16.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .navigationBarsPadding()
+            ) {
                 Appearance(viewModel, prefs)
                 TsvFiles(viewModel, prefs)
                 Updates(viewModel, prefs)
@@ -366,6 +375,7 @@ fun Downloads(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
             title = "Unpack Directory",
             value = Uri.decode(prefs.unpackDir).ifEmpty { "None" },
             icon = Icons.Outlined.Unarchive,
+            enabled = !prefs.unpackInDownload,
             onClick = {
                 unpackDirPicker.launch(Uri.EMPTY)
             }
@@ -514,12 +524,14 @@ fun DialogSetting(
     value: String,
     icon: ImageVector?,
     onClick: () -> Unit,
-    singleLine : Boolean = false
+    singleLine : Boolean = false,
+    enabled: Boolean = true
 ) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .alpha(if (enabled) 1f else 0.5f)
+            .then(if (enabled) Modifier.clickable { onClick() } else Modifier)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

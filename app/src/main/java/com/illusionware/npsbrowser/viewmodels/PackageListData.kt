@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.internal.toLongOrDefault
 import java.io.InputStream
 
 data class PackageListUiState(
@@ -91,24 +92,64 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
         val tsv = tsvReader.readAllWithHeader(file!!)
 
         tsv.forEach { row ->
-            var size = ""
-            val tempSize = row["File Size"]
-            if (!tempSize.isNullOrEmpty()) {
-                size = bytesIntoHumanReadable(tempSize.toLong())
+            if (row["Name"].isNullOrEmpty()) {
+                return@forEach
             }
+            var size = ""
+            var minFW: String? = null
+            var pkgUrl: String? = null
+            var zRif: String? = null
+            var rap: String? = null
+            var contentId: String? = null
+            var sha256: String? = null
+            var modificationDate: String? = null
+
+            val tempSize = row["File Size"]
+            val tempFW = row["Required FW"]
+            val tempUrl = row["PKG direct link"]
+            val tempZRif = row["zRIF"]
+            val tempRap = row["RAP"]
+            val tempContentId = row["Content ID"]
+            val tempsha256 = row["SHA256"]
+            val tempDate = row["Last Modification Date"]
+            if (!tempSize.isNullOrEmpty()) {
+                size = bytesIntoHumanReadable(tempSize.toLongOrDefault(0))
+            }
+            if (!tempFW.isNullOrEmpty()) {
+                minFW = String.format("%.2f", tempFW.toFloat())
+            }
+            if (!tempUrl.isNullOrEmpty() && tempUrl != "MISSING") {
+                pkgUrl = tempUrl
+            }
+            if (!tempZRif.isNullOrEmpty() && tempZRif != "MISSING") {
+                zRif = tempZRif
+            }
+            if (!tempRap.isNullOrEmpty() && tempRap != "MISSING") {
+                rap = tempRap
+            }
+            if (!tempContentId.isNullOrEmpty()) {
+                contentId = tempContentId
+            }
+            if (!tempsha256.isNullOrEmpty()) {
+                sha256 = tempsha256
+            }
+            if (!tempDate.isNullOrEmpty()) {
+                modificationDate = tempDate
+            }
+
             list.add(
                 PackageItem(
                     row["Title ID"] ?: "",
                     row["Region"] ?: "",
-                    row["Name"] ?: "",
-                    row["PKG direct link"] ?: "",
-                    row["Content ID"] ?: "",
-                    row["Last Modification Date"] ?: "",
+                    row["Name"]?.trim() ?: "",
+                    pkgUrl,
+                    contentId,
+                    modificationDate,
                     size,
-                    row["SHA256"] ?: "",
-                    row["zRIF"] ?: "",
-                    row["RAP"] ?: "",
-                    row["Required FW"] ?: "",
+                    sha256,
+                    zRif,
+                    rap,
+                    minFW,
                     console,
                     type,
                 )

@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,19 +83,24 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.illusionware.npsbrowser.R
+import com.illusionware.npsbrowser.Routes
 import com.illusionware.npsbrowser.data.ItemLayout
 import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItem
 import com.illusionware.npsbrowser.ui.components.*
 import com.illusionware.npsbrowser.ui.screens.OnBoarding
+import com.illusionware.npsbrowser.ui.screens.PackageDetails
 import com.illusionware.npsbrowser.ui.screens.SettingsScreen
 import com.illusionware.npsbrowser.ui.theme.ColorAccent
 import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
 import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme
 import com.illusionware.npsbrowser.ui.theme.Typography
+import com.illusionware.npsbrowser.util.isNavigationBarNeedsScrim
 import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
+import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
 import com.illusionware.npsbrowser.viewmodels.PackageListViewModel
 import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
 import kotlinx.coroutines.runBlocking
@@ -116,6 +122,7 @@ class MainActivity : ComponentActivity() {
             val onboardingViewModel: OnboardingViewModel = viewModel(
                 factory = OnboardingViewModel.Factory
             )
+            val packageDetailsViewModel: PackageDetailsViewModel = viewModel()
 
             val onboardingPrefs = onboardingViewModel.uiState.collectAsStateWithLifecycle().value
             val appTheme = runBlocking { settingsViewModel.getAppTheme() }
@@ -135,27 +142,37 @@ class MainActivity : ComponentActivity() {
                 ) {
                     NavHost(
                         navController = navController,
-                        startDestination = if (onboardingPrefs.seenOnboarding) "Home" else "Onboarding",
+                        startDestination = if (onboardingPrefs.seenOnboarding) Routes.Home.route else Routes.Onboarding.route,
                     ) {
-                        composable(route = "Home") {
+                        composable(Routes.Home.route) {
                             HomePage(
-                                navigateToSettings = { navController.navigate("Settings") },
+                                navigateToSettings = { navController.navigate(Routes.Settings.route) },
                                 settingsPrefs = settingsPrefs,
                                 settingsViewModel = settingsViewModel,
+                                navigateToDetailsScreen = { item ->
+                                    packageDetailsViewModel.setSelectedPackage(item)
+                                    navController.navigate(Routes.PackageDetails.route)
+                                },
                             )
                         }
-                        composable(route = "Settings") {
+                        composable(Routes.Settings.route) {
                             SettingsScreen(
                                 navigationGoBack = { navController.popBackStack() },
                             )
                         }
-                        composable(route = "Onboarding") {
+                        composable(Routes.Onboarding.route) {
                             OnBoarding(
                                 navigateToHome = {
                                     navController.popBackStack()
-                                    navController.navigate("Home")
+                                    navController.navigate(Routes.Home.route)
                                 },
                                 darkTheme = darkTheme,
+                            )
+                        }
+                        composable(Routes.PackageDetails.route) {
+                            PackageDetails(
+                                navigationGoBack = { navController.popBackStack() },
+                                packageDetailsViewModel = packageDetailsViewModel,
                             )
                         }
                     }
@@ -168,7 +185,8 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(
-    navigateToSettings: () -> Unit = {},
+    navigateToSettings: () -> Unit,
+    navigateToDetailsScreen: (item: PackageItem) -> Unit,
     settingsPrefs: SettingsPreferences,
     settingsViewModel: SettingsViewModel,
 ) {
@@ -176,9 +194,22 @@ fun HomePage(
     var searchQuery by rememberSaveable { mutableStateOf("")}
     val searchBar = remember { FocusRequester() }
     var layoutDialogOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val systemUiController = rememberSystemUiController()
+    val navbarScrimColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
 
     val tsvs = settingsViewModel.availableTsvs()
-    var selectedBarItem by remember { mutableStateOf(ConsoleType.PSVITA) }
+    var selectedBarItem by rememberSaveable { mutableStateOf(ConsoleType.PSVITA) }
+
+    LaunchedEffect(systemUiController) {
+        systemUiController.setNavigationBarColor(
+            color = if (context.isNavigationBarNeedsScrim()) {
+                navbarScrimColor.copy(alpha = 0.7f)
+            } else {
+                Color.Transparent
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -272,7 +303,11 @@ fun HomePage(
             if (tsvs.isEmpty()) {
                 NoTsvs(navigateToSettings = navigateToSettings)
             } else {
-                PackageList(selectedBarItem, settingsPrefs = settingsPrefs)
+                PackageList(
+                    navigateToDetailsScreen = navigateToDetailsScreen,
+                    type = selectedBarItem,
+                    settingsPrefs = settingsPrefs
+                )
             }
         }
 
@@ -375,6 +410,7 @@ fun NoTsvs(padding: PaddingValues = PaddingValues(0.dp), navigateToSettings: () 
 @Composable
 fun PackageList(
     type: ConsoleType = ConsoleType.PSVITA,
+    navigateToDetailsScreen: (item: PackageItem) -> Unit,
     viewModel: PackageListViewModel = viewModel(
         factory = PackageListViewModel.Factory
     ),
@@ -429,7 +465,7 @@ fun PackageList(
                 if (settingsPrefs.layout == ItemLayout.LIST.ordinal) {
                     LazyColumn {
                         items(packages) {
-                            PackageListItem(it)
+                            PackageListItem(it, navigateToDetailsScreen)
                         }
                     }
                 } else {
@@ -438,7 +474,7 @@ fun PackageList(
                         contentPadding = PaddingValues(8.dp),
                     ) {
                         items(packages) {
-                            PackageGridItem(it)
+                            PackageGridItem(it, navigateToDetailsScreen)
                         }
                     }
                 }
@@ -448,11 +484,15 @@ fun PackageList(
 }
 
 @Composable
-fun PackageListItem(item: PackageItem) {
+fun PackageListItem(
+    item: PackageItem,
+    navigateToDetailsScreen: (item: PackageItem) -> Unit,
+) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: */ }) {
+            .clickable { navigateToDetailsScreen(item) }
+    ) {
         Row(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -500,8 +540,8 @@ fun PackageListItem(item: PackageItem) {
                     ) {
                         ProvideTextStyle(value = Typography.bodySmall.copy(color = MaterialTheme.colorScheme.outline)) {
                             Text(text = item.region)
-                            if (item.minFW.isNotEmpty()) {
-                                Text(text = String.format("%.2f", item.minFW.toFloat()))
+                            if (!item.minFW.isNullOrEmpty()) {
+                                Text(text = item.minFW)
                             }
                             if (item.pkgSize.isNotEmpty()) {
                                 Text(text = item.pkgSize)
@@ -512,14 +552,16 @@ fun PackageListItem(item: PackageItem) {
                 }
             }
             Column {
-                if (item.pkgUrl.isEmpty() || item.pkgUrl == "MISSING") {
+                if (item.pkgUrl.isNullOrEmpty()) {
                     Icon(
                         painter = painterResource(id = R.drawable.no_url_icon),
                         contentDescription = "No PKG URL",
                         tint = Color(0xFFCB5A5A)
                     )
                 }
-                if (item.consoleType != ConsoleType.PSX && (item.zRif.isEmpty() && item.rap.isEmpty())) {
+                if (
+                    item.consoleType != ConsoleType.PSX &&
+                    (item.zRif.isNullOrEmpty() && item.rap.isNullOrEmpty())) {
                     Icon(
                         painter = painterResource(id = R.drawable.no_key_icon),
                         contentDescription = "No License Key",
@@ -553,17 +595,20 @@ fun Tag(title: String, small: Boolean = false) {
 }
 
 @Composable
-fun PackageGridItem(item: PackageItem) {
+fun PackageGridItem(
+    item: PackageItem,
+    navigateToDetailsScreen: (item: PackageItem) -> Unit,
+) {
     Box(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .clickable { /* TODO: */ }
+            .clickable { navigateToDetailsScreen(item) },
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.Start,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(8.dp),
         ) {
             Layout(
                 content = {
@@ -607,8 +652,8 @@ fun PackageGridItem(item: PackageItem) {
             ) {
                 ProvideTextStyle(value = Typography.bodySmall.copy(color = MaterialTheme.colorScheme.outline)) {
                     Text(text = item.region)
-                    if (item.minFW.isNotEmpty()) {
-                        Text(text = String.format("%.2f", item.minFW.toFloat()))
+                    if (!item.minFW.isNullOrEmpty()) {
+                        Text(text = item.minFW)
                     }
                     if (item.pkgSize.isNotEmpty()) {
                         Text(text = item.pkgSize)
@@ -616,14 +661,14 @@ fun PackageGridItem(item: PackageItem) {
                 }
             }
             Row {
-                if (item.pkgUrl.isEmpty() || item.pkgUrl == "MISSING") {
+                if (item.pkgUrl.isNullOrEmpty()) {
                     Icon(
                         painter = painterResource(id = R.drawable.no_url_icon),
                         contentDescription = "No PKG URL",
                         tint = Color(0xFFCB5A5A)
                     )
                 }
-                if (item.zRif.isEmpty() && item.rap.isEmpty()) {
+                if (item.zRif.isNullOrEmpty() && item.rap.isNullOrEmpty()) {
                     Icon(
                         painter = painterResource(id = R.drawable.no_key_icon),
                         contentDescription = "No License Key",
