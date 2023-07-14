@@ -1,4 +1,4 @@
-package com.illusionware.npsbrowser.activities
+package com.illusionware.npsbrowser
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -84,8 +85,6 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.illusionware.npsbrowser.R
-import com.illusionware.npsbrowser.Routes
 import com.illusionware.npsbrowser.data.ItemLayout
 import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.model.ConsoleType
@@ -283,17 +282,29 @@ fun HomePage(
                         tooltip = stringResource(id = R.string.layout),
                         onClick = { layoutDialogOpen = true }
                     ) {
-                        Icon(imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.Filled.ViewList, contentDescription = stringResource(
-                            id = R.string.layout
-                        ))
+                        Icon(
+                            imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.Filled.ViewList,
+                            contentDescription = stringResource(
+                                id = R.string.layout
+                            )
+                        )
+                    }
+                    NPSIconButton(
+                        tooltip = "Download queue",
+                        onClick = { /*TODO*/ }
+                    ) {
+                        Icon(imageVector = Icons.Filled.Downloading, contentDescription = "Download queue")
                     }
                     NPSIconButton(
                         tooltip = stringResource(id = R.string.title_activity_settings),
                         onClick = { navigateToSettings() }
                     ){
-                        Icon(imageVector = Icons.Filled.Settings, contentDescription = stringResource(
-                            id = R.string.title_activity_settings
-                        ))
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(
+                                id = R.string.title_activity_settings
+                            )
+                        )
                     }
                 }
             )

@@ -16,7 +16,7 @@
         android:theme="@style/NPSTheme"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".activities.MainActivity"
+            android:name=".MainActivity"
             android:configChanges="screenSize|screenLayout|keyboardHidden|orientation"
             android:exported="true"
             android:theme="@style/NPSTheme.Splash"

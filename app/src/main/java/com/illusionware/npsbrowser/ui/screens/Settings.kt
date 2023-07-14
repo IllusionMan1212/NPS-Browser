@@ -24,7 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Unarchive
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -116,7 +119,6 @@ fun SettingsScreen(
                 Pkg2Zip(viewModel, prefs)
             }
         }
-
     }
 }
 
@@ -184,7 +186,7 @@ fun TsvFiles(viewModel: SettingsViewModel, prefs: SettingsPreferences) {
             DialogSetting(
                 title = "Expand",
                 value = "PS3 DLC, PSP Games, PSP DLC, PSX Games, PSM Games",
-                icon = Icons.Outlined.ArrowDropDown,
+                icon = Icons.Outlined.ExpandMore,
                 singleLine = true,
                 onClick = { expanded = true },
             )
@@ -515,7 +517,19 @@ fun ToggleSetting(title: String, icon: ImageVector? = null, checked: Boolean, on
                 Box(modifier = Modifier.width(56.dp))
             }
             Text(text = title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1.0f))
-            Switch(checked = checked, onCheckedChange = null)
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                } else null
+            )
         }
     }
 }

@@ -64,7 +64,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.illusionware.npsbrowser.R
-import com.illusionware.npsbrowser.activities.PlaceholderColor
+import com.illusionware.npsbrowser.PlaceholderColor
 import com.illusionware.npsbrowser.data.ItemLayout
 import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.data.Theme
