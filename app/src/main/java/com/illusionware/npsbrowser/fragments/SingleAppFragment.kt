@@ -47,6 +47,11 @@ class SingleAppFragment : Fragment() {
             view?.findViewById<TextView>(R.id.singleAppSizeTitle)?.visibility = View.INVISIBLE
         }
         view?.findViewById<TextView>(R.id.singleAppContentId)?.text = app.contentID
+        if (app.version != null) {
+            view?.findViewById<TextView>(R.id.singleAppVer)?.text = app.version
+        } else {
+            view?.findViewById<TextView>(R.id.singleAppVerTitle)?.visibility = View.INVISIBLE
+        }
         view?.findViewById<TextView>(R.id.singleAppFwVer)?.text = app.minFW
         // TODO: get and set app icon
         if (app.minFW.isNullOrBlank()) {
@@ -59,10 +64,12 @@ class SingleAppFragment : Fragment() {
         if (app.link == "CART ONLY") {
             view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.cart_only)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyPKGButton)?.isEnabled = false
             view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         } else if (app.link == "MISSING") {
             view?.findViewById<TextView>(R.id.singleAppError)?.text = getString(R.string.no_download_link)
             view?.findViewById<Button>(R.id.singleAppDownloadButton)?.isEnabled = false
+            view?.findViewById<Button>(R.id.singleAppCopyPKGButton)?.isEnabled = false
             view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.isEnabled = false
         }
 
@@ -90,24 +97,19 @@ class SingleAppFragment : Fragment() {
                 ) // TODO: set up preference for this
                 downloadManager.enqueue(request)
             } catch (e: Exception) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.download_error),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(), getString(R.string.download_error), Toast.LENGTH_SHORT).show()
             }
         }
 
-        // long click listener for download button
-        view?.findViewById<Button>(R.id.singleAppDownloadButton)?.setOnLongClickListener {
+        // click listener for the copy pkg button
+        view?.findViewById<Button>(R.id.singleAppCopyPKGButton)?.setOnClickListener {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("PKG URL", app.link)
             clipboardManager.setPrimaryClip(clipData)
-            Toast.makeText(requireContext(), getString(R.string.pkg_url_copied), Toast.LENGTH_SHORT).show()
-            true
+            Toast.makeText(requireContext(),getString(R.string.pkg_url_copied),Toast.LENGTH_SHORT).show()
         }
 
-        // click listener for the copyzrifbutton button
+        // click listener for the copy zRIF button
         view?.findViewById<Button>(R.id.singleAppCopyZRIFButton)?.setOnClickListener {
             val clipboardManager = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = ClipData.newPlainText("zRIF", app.license)
