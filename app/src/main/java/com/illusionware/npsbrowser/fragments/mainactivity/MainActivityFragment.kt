@@ -151,12 +151,13 @@ class MainActivityFragment : Fragment() {
                         lastDateTime = lastDateTime.substring(0, 10)
                     }
                     val fileSize = entry["File Size"]?.toLongOrNull()
+                    val version = entry["Update Version"]
                     val sha256 = entry["SHA256"]
                     val minFW = entry["Required FW"]
                     val app = AppData(
                         id, region, name, link ?: "MISSING", license ?: "MISSING",
                         contentID ?: "MISSING", lastDateTime ?: "MISSING",
-                        fileSize, sha256 ?: "MISSING", minFW
+                        fileSize, version, sha256 ?: "MISSING", minFW
                     )
                     apps?.add(app)
                 }

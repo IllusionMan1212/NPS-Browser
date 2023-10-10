@@ -4,9 +4,11 @@
 	<string name="title_activity_settings">設置</string>
 	<string name="search">搜尋</string>
 	<string name="download">下載</string>
-	<string name="copy_zrif">複製zRIF</string>
+	<string name="copy_pkg">複製PKG地址</string>
+	<string name="copy_zrif">複製zRIF金鑰</string>
 	<string name="content_id">內容ID</string>
 	<string name="size">檔案大小</string>
+	<string name="version">版本</string>
 	<string name="minfw">最低韌體版本</string>
 	<string name="single_app_icon">應用程式圖標</string>
 	<string name="no_license">注意：這個內容沒有提供授權</string>

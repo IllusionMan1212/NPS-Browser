@@ -5,7 +5,7 @@ import com.github.wrdlbrnft.sortedlistadapter.SortedListAdapter
 data class AppData(
     val titleID: String?, val region: String?, val title: String?, val link: String?,
     val license: String?, val contentID: String?, val lastDateTime: String?,
-    val fileSize: Number?, val sha256: String?, val minFW: String?
+    val fileSize: Number?, val version: String?, val sha256: String?, val minFW: String?
 ) : SortedListAdapter.ViewModel {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -21,6 +21,7 @@ data class AppData(
         if (contentID != other.contentID) return false
         if (lastDateTime != other.lastDateTime) return false
         if (fileSize != other.fileSize) return false
+        if (version != other.version) return false
         if (sha256 != other.sha256) return false
         if (minFW != other.minFW) return false
 
@@ -36,6 +37,7 @@ data class AppData(
         result = 31 * result + (contentID?.hashCode() ?: 0)
         result = 31 * result + (lastDateTime?.hashCode() ?: 0)
         result = 31 * result + (fileSize?.hashCode() ?: 0)
+        result = 31 * result + (version?.hashCode() ?: 0)
         result = 31 * result + (sha256?.hashCode() ?: 0)
         result = 31 * result + (minFW?.hashCode() ?: 0)
         return result
