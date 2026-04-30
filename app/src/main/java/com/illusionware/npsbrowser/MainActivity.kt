@@ -3,6 +3,10 @@ package com.illusionware.npsbrowser
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,13 +30,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,20 +88,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.illusionware.npsbrowser.data.ItemLayout
 import com.illusionware.npsbrowser.data.SettingsPreferences
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItem
 import com.illusionware.npsbrowser.ui.components.*
+import com.illusionware.npsbrowser.ui.screens.Downloads
 import com.illusionware.npsbrowser.ui.screens.OnBoarding
 import com.illusionware.npsbrowser.ui.screens.PackageDetails
 import com.illusionware.npsbrowser.ui.screens.SettingsScreen
+import com.illusionware.npsbrowser.ui.screens.readexProFamily
 import com.illusionware.npsbrowser.ui.theme.ColorAccent
 import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
+import com.illusionware.npsbrowser.ui.theme.ColorTag
 import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme
 import com.illusionware.npsbrowser.ui.theme.Typography
-import com.illusionware.npsbrowser.util.isNavigationBarNeedsScrim
 import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
 import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
 import com.illusionware.npsbrowser.viewmodels.PackageListViewModel
@@ -112,8 +117,9 @@ val redHatDisplayFamily = FontFamily(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModel.Factory
@@ -121,12 +127,18 @@ class MainActivity : ComponentActivity() {
             val onboardingViewModel: OnboardingViewModel = viewModel(
                 factory = OnboardingViewModel.Factory
             )
-            val packageDetailsViewModel: PackageDetailsViewModel = viewModel()
+            val packageDetailsViewModel: PackageDetailsViewModel = viewModel(
+                factory = PackageDetailsViewModel.Factory
+            )
 
-            val onboardingPrefs = onboardingViewModel.uiState.collectAsStateWithLifecycle().value
             val appTheme = runBlocking { settingsViewModel.getAppTheme() }
+            var seenOnboarding by remember { mutableStateOf(false) }
             val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
             val navController = rememberNavController()
+
+            runBlocking {
+                seenOnboarding = onboardingViewModel.getOnboardingStatus()
+            }
 
             val darkTheme = when (appTheme) {
                 0 -> false
@@ -137,11 +149,17 @@ class MainActivity : ComponentActivity() {
             NPSBrowserTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = if (onboardingPrefs.seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
+                    color = if (seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
                 ) {
                     NavHost(
                         navController = navController,
-                        startDestination = if (onboardingPrefs.seenOnboarding) Routes.Home.route else Routes.Onboarding.route,
+                        startDestination = if (seenOnboarding) Routes.Home.route else Routes.Onboarding.route,
+                        enterTransition = {
+                            fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(300))
+                        },
                     ) {
                         composable(Routes.Home.route) {
                             HomePage(
@@ -152,6 +170,10 @@ class MainActivity : ComponentActivity() {
                                     packageDetailsViewModel.setSelectedPackage(item)
                                     navController.navigate(Routes.PackageDetails.route)
                                 },
+                                navigateToDownloads = {
+                                    navController.navigate(Routes.Downloads.route)
+                                },
+                                packageDetailsViewModel = packageDetailsViewModel,
                             )
                         }
                         composable(Routes.Settings.route) {
@@ -174,6 +196,12 @@ class MainActivity : ComponentActivity() {
                                 packageDetailsViewModel = packageDetailsViewModel,
                             )
                         }
+                        composable(Routes.Downloads.route) {
+                            Downloads(
+                                navigationGoBack = { navController.popBackStack() },
+                                packageDetailsViewModel = packageDetailsViewModel,
+                            )
+                        }
                     }
                 }
             }
@@ -186,31 +214,19 @@ class MainActivity : ComponentActivity() {
 fun HomePage(
     navigateToSettings: () -> Unit,
     navigateToDetailsScreen: (item: PackageItem) -> Unit,
+    navigateToDownloads: () -> Unit,
     settingsPrefs: SettingsPreferences,
     settingsViewModel: SettingsViewModel,
     packageListViewModel: PackageListViewModel = viewModel(
         factory = PackageListViewModel.Factory
     ),
+    packageDetailsViewModel: PackageDetailsViewModel
 ) {
     val searchBar = remember { FocusRequester() }
     var layoutDialogOpen by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val systemUiController = rememberSystemUiController()
-    val navbarScrimColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
-
     val uiState = packageListViewModel.uiState.collectAsStateWithLifecycle().value
     val tsvs = settingsViewModel.availableTsvs()
     var selectedBarItem by rememberSaveable { mutableStateOf(ConsoleType.PSVITA) }
-
-    LaunchedEffect(systemUiController) {
-        systemUiController.setNavigationBarColor(
-            color = if (context.isNavigationBarNeedsScrim()) {
-                navbarScrimColor.copy(alpha = 0.7f)
-            } else {
-                Color.Transparent
-            }
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -228,7 +244,7 @@ fun HomePage(
                                 packageListViewModel.closeSearch()
                             }
                         ){
-                            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Close Search")
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close Search")
                         }
                         Spacer(Modifier.width(12.dp))
                         TextField(
@@ -283,7 +299,7 @@ fun HomePage(
                         onClick = { layoutDialogOpen = true }
                     ) {
                         Icon(
-                            imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.Filled.ViewList,
+                            imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
                             contentDescription = stringResource(
                                 id = R.string.layout
                             )
@@ -291,14 +307,29 @@ fun HomePage(
                     }
                     NPSIconButton(
                         tooltip = "Download queue",
-                        onClick = { /*TODO*/ }
+                        onClick = navigateToDownloads,
+                        badge = {
+                            val count = packageDetailsViewModel.downloadManager.queueState.collectAsStateWithLifecycle().value.count()
+                            if (count > 0) {
+                                Badge(
+                                    containerColor = ColorTag,
+                                    contentColor = Color.Black,
+                                ) {
+                                    Text(
+                                        text = count.toString(),
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = readexProFamily
+                                    )
+                                }
+                            }
+                        }
                     ) {
                         Icon(imageVector = Icons.Filled.Downloading, contentDescription = "Download queue")
                     }
                     NPSIconButton(
                         tooltip = stringResource(id = R.string.title_activity_settings),
                         onClick = { navigateToSettings() }
-                    ){
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
                             contentDescription = stringResource(
@@ -610,7 +641,7 @@ fun Tag(title: String, small: Boolean = false) {
     Box(
         Modifier
             .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFFEAF654))
+            .background(ColorTag)
             .layoutId("tag")
             .padding(horizontal = if (small) 6.dp else 8.dp, vertical = if (small) 2.dp else 4.dp)
     ) {

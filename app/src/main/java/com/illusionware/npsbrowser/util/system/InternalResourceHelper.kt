@@ -1,4 +1,4 @@
-package com.illusionware.npsbrowser.util
+package com.illusionware.npsbrowser.util.system
 
 import android.annotation.SuppressLint
 import android.content.Context

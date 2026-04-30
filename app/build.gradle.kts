@@ -1,9 +1,13 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
     kotlin("android")
+    kotlin("kapt")
+    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
+    alias(libs.plugins.compose.compiler)
 }
 
 val keystoreProperties = Properties()
@@ -14,12 +18,14 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.illusionware.npsbrowser"
-    compileSdk = 33
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.illusionware.npsbrowser"
+        // TODO: Network Security Config needs 24+ API level, don't know if I want to raise the min
+        // just for that
         minSdk = 23
-        targetSdk = 33
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
 
@@ -27,6 +33,14 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.2"
     }
 
     buildFeatures {
@@ -60,12 +74,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.8"
-    }
-    buildToolsVersion = "33.0.1"
-    kotlinOptions {
-        jvmTarget = "17"
+    buildToolsVersion = "36.0.0"
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_17
+        }
     }
 }
 
@@ -75,43 +89,43 @@ repositories {
 }
 
 dependencies {
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
-    implementation("androidx.activity:activity-compose:1.7.2")
-    implementation(platform("androidx.compose:compose-bom:2022.10.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.core:core-ktx:1.10.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2022.10.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.core.ktx)
     // Jetpack Compose
-    val composeBom = platform("androidx.compose:compose-bom:2023.04.01")
-    implementation(composeBom)
-    androidTestImplementation(composeBom)
+    implementation(platform(libs.androidx.compose.bom))
+
+    // Room database
+    implementation(libs.androidx.room.runtime)
+    // To use Kotlin Symbol Processing (KSP)
+    ksp(libs.androidx.room.compiler)
+
+    // optional - Kotlin Extensions and Coroutines support for Room
+    implementation(libs.androidx.room.ktx)
+
 
     // Material 3
-    implementation("androidx.compose.material3:material3:1.1.1")
-    implementation("androidx.compose.material:material-icons-extended:1.4.3")
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     // Android Studio Preview support
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation(libs.androidx.ui.tooling.preview)
+    debugImplementation(libs.androidx.ui.tooling)
 
     // Preferences DataStore (alternative to SharedPreferences)
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation(libs.androidx.datastore.preferences)
 
-    // Compose extras library for controlling system ui and etc.
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.31.2-alpha")
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.navigation.compose)
 
-    implementation("com.github.IllusionMan1212:kotlin-csv:cedb7c5ab2")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    implementation("com.google.android.material:material:1.9.0")
-    implementation("com.github.bumptech.glide:glide:4.14.2")
-    annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
-    implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.navigation:navigation-compose:2.6.0")
-    implementation("io.coil-kt:coil:2.4.0")
-    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation(libs.coil)
+    implementation(libs.coil.compose)
+    implementation(libs.rxjava)
+    implementation(libs.okio)
+    implementation(libs.flowreactivenetwork)
+
+    implementation(libs.kotlin.csv)
+    implementation(libs.material)
 }

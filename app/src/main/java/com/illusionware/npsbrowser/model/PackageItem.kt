@@ -8,6 +8,7 @@ data class PackageItem(
     val contentId: String?,
     val modificationDate: String?,
     val pkgSize: String,
+    val pkgSizeInBytes: ULong?,
     val sha256: String?,
     val zRif: String?,
     val rap: String?,

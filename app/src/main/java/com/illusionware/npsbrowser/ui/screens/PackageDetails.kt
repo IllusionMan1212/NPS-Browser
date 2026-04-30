@@ -1,5 +1,7 @@
 package com.illusionware.npsbrowser.ui.screens
 
+import android.annotation.SuppressLint
+import android.content.ClipData
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,7 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Public
@@ -50,13 +52,14 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,9 +68,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.PlaceholderColor
-import com.illusionware.npsbrowser.data.ItemLayout
 import com.illusionware.npsbrowser.data.SettingsPreferences
-import com.illusionware.npsbrowser.data.Theme
+import com.illusionware.npsbrowser.data.download.NPSPackageDownload
 import com.illusionware.npsbrowser.ui.components.NPSAlertDialog
 import com.illusionware.npsbrowser.ui.components.NPSFloatingActionButton
 import com.illusionware.npsbrowser.ui.components.NPSIconButton
@@ -77,6 +79,7 @@ import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
 import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
 import kotlinx.coroutines.launch
 
+@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PackageDetails(
@@ -86,7 +89,7 @@ fun PackageDetails(
     ),
     packageDetailsViewModel: PackageDetailsViewModel,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -96,6 +99,29 @@ fun PackageDetails(
 
     val item = packageDetailsViewModel.uiState.collectAsStateWithLifecycle().value.item!!
     var showBottomSheet by remember { mutableStateOf(false) }
+    var pendingOverwriteDownload by remember { mutableStateOf<NPSPackageDownload?>(null) }
+
+    fun buildDownloadRequest(): NPSPackageDownload {
+        return NPSPackageDownload(
+            item.pkgUrl!!,
+            item.titleId,
+            item.name,
+            item.sha256,
+            item.pkgSizeInBytes?.toLong() ?: 0,
+            0L,
+            System.currentTimeMillis()
+        )
+    }
+
+    fun requestDownload(overwriteExisting: Boolean = false) {
+        val downloadRequest = buildDownloadRequest()
+        if (!overwriteExisting && packageDetailsViewModel.downloadManager.shouldConfirmOverwrite(downloadRequest.url)) {
+            pendingOverwriteDownload = downloadRequest
+            return
+        }
+
+        packageDetailsViewModel.downloadManager.download(downloadRequest, overwriteExisting = overwriteExisting)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState)},
@@ -107,7 +133,7 @@ fun PackageDetails(
                     .padding(vertical = 8.dp, horizontal = 4.dp),
             ) {
                 NPSIconButton(tooltip = "Go Back", onClick = navigationGoBack) {
-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Go Back" )
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back" )
                 }
             }
         },
@@ -116,9 +142,13 @@ fun PackageDetails(
                 NPSFloatingActionButton(
                     onClick = {
                         if (!item.zRif.isNullOrEmpty()) {
-                            clipboard.setText(AnnotatedString(item.zRif))
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(item.zRif, item.zRif)))
+                            }
                         } else if (!item.rap.isNullOrEmpty()) {
-                            clipboard.setText(AnnotatedString(item.rap))
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(item.rap, item.rap)))
+                            }
                         }
                         scope.launch {
                             snackbarHostState.showSnackbar("License key copied to clipboard")
@@ -132,7 +162,9 @@ fun PackageDetails(
                     )
                 }
                 NPSFloatingActionButton(
-                    onClick = { /* TODO: */ },
+                    onClick = {
+                        requestDownload()
+                    },
                     onLongClick = { showBottomSheet = true },
                     enabled = !item.pkgUrl.isNullOrEmpty()
                 ) {
@@ -209,7 +241,29 @@ fun PackageDetails(
             },
             sheetState = sheetState,
             prefs = prefs,
+            packageDetailsViewModel = packageDetailsViewModel,
+            onDownload = { requestDownload() }
         )
+    }
+
+    pendingOverwriteDownload?.let { downloadRequest ->
+        NPSAlertDialog(
+            onDismiss = { pendingOverwriteDownload = null },
+            title = "Overwrite existing package?",
+            buttons = {
+                TextButton(onClick = { pendingOverwriteDownload = null }) {
+                    Text(text = "Keep Existing")
+                }
+                TextButton(onClick = {
+                    pendingOverwriteDownload = null
+                    packageDetailsViewModel.downloadManager.download(downloadRequest, overwriteExisting = true)
+                }) {
+                    Text(text = "Overwrite")
+                }
+            }
+        ) {
+            Text("This package is already downloaded. Choose whether to keep the existing file or overwrite it.")
+        }
     }
 }
 
@@ -218,14 +272,16 @@ fun PackageDetails(
 fun OneTimeConfigBottomSheet(
     sheetState: SheetState,
     onDismiss: () -> Unit,
-    prefs: SettingsPreferences
+    prefs: SettingsPreferences,
+    packageDetailsViewModel: PackageDetailsViewModel,
+    onDownload: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(top = 0.dp),
+        //windowInsets = WindowInsets(top = 0.dp),
     ) {
-        OneTimeConfigSheetContent(prefs)
+        OneTimeConfigSheetContent(prefs, packageDetailsViewModel, onDownload)
     }
 }
 
@@ -290,9 +346,12 @@ fun Option(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
+fun OneTimeConfigSheetContent(
+    prefs: SettingsPreferences,
+    packageDetailsViewModel: PackageDetailsViewModel,
+    onDownload: () -> Unit,
+) {
     var autoDecrypt by remember { mutableStateOf(prefs.pkg2zipAutoDecrypt) }
     var unpackInPlace by remember { mutableStateOf(prefs.unpackInDownload) }
     var deleteAfter by remember { mutableStateOf(prefs.deleteAfterUnpack) }
@@ -317,6 +376,8 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
             unpackDir = dirUri.toString()
         }
     }
+
+    val item = packageDetailsViewModel.uiState.collectAsStateWithLifecycle().value.item!!
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -385,7 +446,9 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
                 }
             }
             Button(
-                onClick = { /*TODO: do the download*/ },
+                onClick = {
+                    onDownload()
+                },
                 modifier = Modifier.padding(horizontal = 24.dp),
             ) {
                 Icon(
@@ -423,33 +486,5 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
                 },
             )
         }
-    }
-}
-
-@Composable
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
-fun BottomSheetPreview() {
-    val prefs = SettingsPreferences(
-        Theme.SYSTEM.ordinal,
-        ItemLayout.LIST.ordinal,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        false,
-        false,
-        "",
-        true,
-    )
-
-    Column {
-        OneTimeConfigSheetContent(prefs = prefs)
     }
 }

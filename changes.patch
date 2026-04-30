@@ -1,0 +1,3699 @@
+diff --git a/.gitignore b/.gitignore
+index db8ce29..dc9c670 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,3 @@
+-*.iml
+ .gradle
+ /local.properties
+ /.idea/caches
+@@ -7,7 +6,6 @@
+ /.idea/workspace.xml
+ /.idea/navEditor.xml
+ /.idea/assetWizardSettings.xml
+-.DS_Store
+ /build
+ /captures
+ .externalNativeBuild
+diff --git a/TODO.md b/TODO.md
+new file mode 100644
+index 0000000..8b897cf
+--- /dev/null
++++ b/TODO.md
+@@ -0,0 +1,21 @@
++Download Manager :-
++  - Working on :-
++    - Trying to get OkHttp requests to cancel
++
++  - Key :-
++    - Show progress on the UI
++    - Sync download notification with UI
++
++    - Other fixes for the notification
++
++  - Nice To Haves :-
++    - Show error message in the UI instead of a generic "Failed"
++    - Simultaneous downloading
++    - Reordering of queue
++
++  - Testing :-
++    - Pausing (UI "works" but download doesn't pause)
++
++  - Bugs :-
++    - Some packages REFUSE to download for some reason and fail with an IO FILE EXISTS (or doesn't?) error
++    - Notification is persistent even after completion and cancellation (I think, needs testing)
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index dd9cc31..297e63d 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -1,9 +1,13 @@
++import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+ import java.util.Properties
+ import java.io.FileInputStream
+ 
+ plugins {
+     id("com.android.application")
+     kotlin("android")
++    kotlin("kapt")
++    id("com.google.devtools.ksp") version "2.2.0-2.0.2"
++    alias(libs.plugins.compose.compiler)
+ }
+ 
+ val keystoreProperties = Properties()
+@@ -14,12 +18,14 @@ if (keystorePropertiesFile.exists()) {
+ 
+ android {
+     namespace = "com.illusionware.npsbrowser"
+-    compileSdk = 33
++    compileSdk = 36
+ 
+     defaultConfig {
+         applicationId = "com.illusionware.npsbrowser"
++        // TODO: Network Security Config needs 24+ API level, don't know if I want to raise the min
++        // just for that
+         minSdk = 23
+-        targetSdk = 33
++        targetSdk = 36
+         versionCode = 1
+         versionName = "0.1.0"
+ 
+@@ -27,6 +33,14 @@ android {
+         vectorDrawables {
+             useSupportLibrary = true
+         }
++
++        ksp {
++            arg("room.schemaLocation", "$projectDir/schemas")
++        }
++    }
++
++    composeOptions {
++        kotlinCompilerExtensionVersion = "1.5.2"
+     }
+ 
+     buildFeatures {
+@@ -60,12 +74,12 @@ android {
+         targetCompatibility = JavaVersion.VERSION_17
+     }
+ 
+-    composeOptions {
+-        kotlinCompilerExtensionVersion = "1.4.8"
+-    }
+-    buildToolsVersion = "33.0.1"
+-    kotlinOptions {
+-        jvmTarget = "17"
++    buildToolsVersion = "36.0.0"
++
++    kotlin {
++        compilerOptions {
++            jvmTarget = JvmTarget.JVM_17
++        }
+     }
+ }
+ 
+@@ -75,43 +89,43 @@ repositories {
+ }
+ 
+ dependencies {
+-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
+-    implementation("androidx.activity:activity-compose:1.7.2")
+-    implementation(platform("androidx.compose:compose-bom:2022.10.00"))
+-    implementation("androidx.compose.ui:ui")
+-    implementation("androidx.compose.ui:ui-graphics")
+-    implementation("androidx.core:core-ktx:1.10.1")
+-    androidTestImplementation(platform("androidx.compose:compose-bom:2022.10.00"))
+-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
++    implementation(libs.androidx.lifecycle.runtime.ktx)
++    implementation(libs.androidx.lifecycle.runtime.compose)
++    implementation(libs.androidx.activity.compose)
++    implementation(libs.androidx.ui)
++    implementation(libs.androidx.ui.graphics)
++    implementation(libs.androidx.core.ktx)
+     // Jetpack Compose
+-    val composeBom = platform("androidx.compose:compose-bom:2023.04.01")
+-    implementation(composeBom)
+-    androidTestImplementation(composeBom)
++    implementation(platform(libs.androidx.compose.bom))
++
++    // Room database
++    implementation(libs.androidx.room.runtime)
++    // To use Kotlin Symbol Processing (KSP)
++    ksp(libs.androidx.room.compiler)
++
++    // optional - Kotlin Extensions and Coroutines support for Room
++    implementation(libs.androidx.room.ktx)
++
+ 
+     // Material 3
+-    implementation("androidx.compose.material3:material3:1.1.1")
+-    implementation("androidx.compose.material:material-icons-extended:1.4.3")
++    implementation(libs.androidx.material3)
++    implementation(libs.androidx.material.icons.extended)
+     // Android Studio Preview support
+-    implementation("androidx.compose.ui:ui-tooling-preview")
+-    debugImplementation("androidx.compose.ui:ui-tooling")
++    implementation(libs.androidx.ui.tooling.preview)
++    debugImplementation(libs.androidx.ui.tooling)
+ 
+     // Preferences DataStore (alternative to SharedPreferences)
+-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+-
+-    // Compose extras library for controlling system ui and etc.
+-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.31.2-alpha")
+-
+-    implementation("com.github.IllusionMan1212:kotlin-csv:cedb7c5ab2")
+-    testImplementation("junit:junit:4.13.2")
+-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+-    implementation("com.google.android.material:material:1.9.0")
+-    implementation("com.github.bumptech.glide:glide:4.14.2")
+-    annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
+-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+-    implementation("androidx.core:core-splashscreen:1.0.1")
+-    implementation("androidx.navigation:navigation-compose:2.6.0")
+-    implementation("io.coil-kt:coil:2.4.0")
+-    implementation("io.coil-kt:coil-compose:2.4.0")
++    implementation(libs.androidx.datastore.preferences)
++
++    implementation(libs.androidx.core.splashscreen)
++    implementation(libs.androidx.navigation.compose)
++
++    implementation(libs.coil)
++    implementation(libs.coil.compose)
++    implementation(libs.rxjava)
++    implementation(libs.okio)
++    implementation(libs.flowreactivenetwork)
++
++    implementation(libs.kotlin.csv)
++    implementation(libs.material)
+ }
+diff --git a/app/schemas/com.illusionware.npsbrowser.data.download.DownloadStore/1.json b/app/schemas/com.illusionware.npsbrowser.data.download.DownloadStore/1.json
+new file mode 100644
+index 0000000..26f8bd9
+--- /dev/null
++++ b/app/schemas/com.illusionware.npsbrowser.data.download.DownloadStore/1.json
+@@ -0,0 +1,70 @@
++{
++  "formatVersion": 1,
++  "database": {
++    "version": 1,
++    "identityHash": "1560ee26782336728f9f46d05e39072d",
++    "entities": [
++      {
++        "tableName": "download",
++        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url` TEXT NOT NULL, `titleId` TEXT NOT NULL, `name` TEXT NOT NULL, `sha256` TEXT, `size` INTEGER NOT NULL, `bytesDownloaded` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`url`))",
++        "fields": [
++          {
++            "fieldPath": "url",
++            "columnName": "url",
++            "affinity": "TEXT",
++            "notNull": true
++          },
++          {
++            "fieldPath": "titleId",
++            "columnName": "titleId",
++            "affinity": "TEXT",
++            "notNull": true
++          },
++          {
++            "fieldPath": "name",
++            "columnName": "name",
++            "affinity": "TEXT",
++            "notNull": true
++          },
++          {
++            "fieldPath": "sha256",
++            "columnName": "sha256",
++            "affinity": "TEXT",
++            "notNull": false
++          },
++          {
++            "fieldPath": "size",
++            "columnName": "size",
++            "affinity": "INTEGER",
++            "notNull": true
++          },
++          {
++            "fieldPath": "bytesDownloaded",
++            "columnName": "bytesDownloaded",
++            "affinity": "INTEGER",
++            "notNull": true
++          },
++          {
++            "fieldPath": "createdAt",
++            "columnName": "createdAt",
++            "affinity": "INTEGER",
++            "notNull": true
++          }
++        ],
++        "primaryKey": {
++          "autoGenerate": false,
++          "columnNames": [
++            "url"
++          ]
++        },
++        "indices": [],
++        "foreignKeys": []
++      }
++    ],
++    "views": [],
++    "setupQueries": [
++      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
++      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1560ee26782336728f9f46d05e39072d')"
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 00ebfda..57bfcd6 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -2,9 +2,17 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:tools="http://schemas.android.com/tools">
+ 
+-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.INTERNET" />
++    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
++    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
++
++    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
++    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
++
++    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++    <uses-permission android:name="android.permission.WAKE_LOCK" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+ 
+     <application
+         android:name=".NPSApp"
+@@ -14,7 +22,8 @@
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
+         android:theme="@style/NPSTheme"
+-        android:usesCleartextTraffic="true">
++        android:networkSecurityConfig="@xml/network_security_config"
++        >
+         <activity
+             android:name=".MainActivity"
+             android:configChanges="screenSize|screenLayout|keyboardHidden|orientation"
+@@ -27,6 +36,12 @@
+                 <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
+         </activity>
++
++        <service
++            android:name=".data.download.DownloadService"
++            android:exported="false"
++            android:foregroundServiceType="dataSync"
++        />
+     </application>
+ 
+ </manifest>
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/MainActivity.kt b/app/src/main/java/com/illusionware/npsbrowser/MainActivity.kt
+index a95a908..f9adf81 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/MainActivity.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/MainActivity.kt
+@@ -3,6 +3,10 @@ package com.illusionware.npsbrowser
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
++import androidx.activity.enableEdgeToEdge
++import androidx.compose.animation.core.tween
++import androidx.compose.animation.fadeIn
++import androidx.compose.animation.fadeOut
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.isSystemInDarkTheme
+@@ -26,13 +30,14 @@ import androidx.compose.foundation.lazy.grid.items
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.ViewList
+ import androidx.compose.material.icons.filled.Close
+ import androidx.compose.material.icons.filled.Downloading
+ import androidx.compose.material.icons.filled.GridView
+ import androidx.compose.material.icons.filled.Search
+ import androidx.compose.material.icons.filled.Settings
+-import androidx.compose.material.icons.filled.ViewList
++import androidx.compose.material3.Badge
+ import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.Icon
+@@ -47,7 +52,6 @@ import androidx.compose.material3.TextButton
+ import androidx.compose.material3.TextField
+ import androidx.compose.material3.TextFieldDefaults
+ import androidx.compose.material3.TopAppBar
+-import androidx.compose.material3.surfaceColorAtElevation
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+@@ -84,20 +88,21 @@ import androidx.navigation.compose.composable
+ import androidx.navigation.compose.rememberNavController
+ import coil.compose.AsyncImage
+ import coil.request.ImageRequest
+-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+ import com.illusionware.npsbrowser.data.ItemLayout
+ import com.illusionware.npsbrowser.data.SettingsPreferences
+ import com.illusionware.npsbrowser.model.ConsoleType
+ import com.illusionware.npsbrowser.model.PackageItem
+ import com.illusionware.npsbrowser.ui.components.*
++import com.illusionware.npsbrowser.ui.screens.Downloads
+ import com.illusionware.npsbrowser.ui.screens.OnBoarding
+ import com.illusionware.npsbrowser.ui.screens.PackageDetails
+ import com.illusionware.npsbrowser.ui.screens.SettingsScreen
++import com.illusionware.npsbrowser.ui.screens.readexProFamily
+ import com.illusionware.npsbrowser.ui.theme.ColorAccent
+ import com.illusionware.npsbrowser.ui.theme.ColorOnPrimaryLight
++import com.illusionware.npsbrowser.ui.theme.ColorTag
+ import com.illusionware.npsbrowser.ui.theme.NPSBrowserTheme
+ import com.illusionware.npsbrowser.ui.theme.Typography
+-import com.illusionware.npsbrowser.util.isNavigationBarNeedsScrim
+ import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
+ import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
+ import com.illusionware.npsbrowser.viewmodels.PackageListViewModel
+@@ -112,8 +117,9 @@ val redHatDisplayFamily = FontFamily(
+ class MainActivity : ComponentActivity() {
+     override fun onCreate(savedInstanceState: Bundle?) {
+         installSplashScreen()
+-
++        enableEdgeToEdge()
+         super.onCreate(savedInstanceState)
++
+         setContent {
+             val settingsViewModel: SettingsViewModel = viewModel(
+                 factory = SettingsViewModel.Factory
+@@ -121,13 +127,19 @@ class MainActivity : ComponentActivity() {
+             val onboardingViewModel: OnboardingViewModel = viewModel(
+                 factory = OnboardingViewModel.Factory
+             )
+-            val packageDetailsViewModel: PackageDetailsViewModel = viewModel()
++            val packageDetailsViewModel: PackageDetailsViewModel = viewModel(
++                factory = PackageDetailsViewModel.Factory
++            )
+ 
+-            val onboardingPrefs = onboardingViewModel.uiState.collectAsStateWithLifecycle().value
+             val appTheme = runBlocking { settingsViewModel.getAppTheme() }
++            var seenOnboarding by remember { mutableStateOf(false) }
+             val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
+             val navController = rememberNavController()
+ 
++            runBlocking {
++                seenOnboarding = onboardingViewModel.getOnboardingStatus()
++            }
++
+             val darkTheme = when (appTheme) {
+                 0 -> false
+                 1 -> true
+@@ -137,11 +149,17 @@ class MainActivity : ComponentActivity() {
+             NPSBrowserTheme(darkTheme = darkTheme) {
+                 Surface(
+                     modifier = Modifier.fillMaxSize(),
+-                    color = if (onboardingPrefs.seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
++                    color = if (seenOnboarding) MaterialTheme.colorScheme.background else ColorAccent
+                 ) {
+                     NavHost(
+                         navController = navController,
+-                        startDestination = if (onboardingPrefs.seenOnboarding) Routes.Home.route else Routes.Onboarding.route,
++                        startDestination = if (seenOnboarding) Routes.Home.route else Routes.Onboarding.route,
++                        enterTransition = {
++                            fadeIn(animationSpec = tween(300))
++                        },
++                        exitTransition = {
++                            fadeOut(animationSpec = tween(300))
++                        },
+                     ) {
+                         composable(Routes.Home.route) {
+                             HomePage(
+@@ -152,6 +170,10 @@ class MainActivity : ComponentActivity() {
+                                     packageDetailsViewModel.setSelectedPackage(item)
+                                     navController.navigate(Routes.PackageDetails.route)
+                                 },
++                                navigateToDownloads = {
++                                    navController.navigate(Routes.Downloads.route)
++                                },
++                                packageDetailsViewModel = packageDetailsViewModel,
+                             )
+                         }
+                         composable(Routes.Settings.route) {
+@@ -174,6 +196,12 @@ class MainActivity : ComponentActivity() {
+                                 packageDetailsViewModel = packageDetailsViewModel,
+                             )
+                         }
++                        composable(Routes.Downloads.route) {
++                            Downloads(
++                                navigationGoBack = { navController.popBackStack() },
++                                packageDetailsViewModel = packageDetailsViewModel,
++                            )
++                        }
+                     }
+                 }
+             }
+@@ -186,32 +214,20 @@ class MainActivity : ComponentActivity() {
+ fun HomePage(
+     navigateToSettings: () -> Unit,
+     navigateToDetailsScreen: (item: PackageItem) -> Unit,
++    navigateToDownloads: () -> Unit,
+     settingsPrefs: SettingsPreferences,
+     settingsViewModel: SettingsViewModel,
+     packageListViewModel: PackageListViewModel = viewModel(
+         factory = PackageListViewModel.Factory
+     ),
++    packageDetailsViewModel: PackageDetailsViewModel
+ ) {
+     val searchBar = remember { FocusRequester() }
+     var layoutDialogOpen by remember { mutableStateOf(false) }
+-    val context = LocalContext.current
+-    val systemUiController = rememberSystemUiController()
+-    val navbarScrimColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+-
+     val uiState = packageListViewModel.uiState.collectAsStateWithLifecycle().value
+     val tsvs = settingsViewModel.availableTsvs()
+     var selectedBarItem by rememberSaveable { mutableStateOf(ConsoleType.PSVITA) }
+ 
+-    LaunchedEffect(systemUiController) {
+-        systemUiController.setNavigationBarColor(
+-            color = if (context.isNavigationBarNeedsScrim()) {
+-                navbarScrimColor.copy(alpha = 0.7f)
+-            } else {
+-                Color.Transparent
+-            }
+-        )
+-    }
+-
+     Scaffold(
+         topBar = {
+             TopAppBar(
+@@ -228,7 +244,7 @@ fun HomePage(
+                                 packageListViewModel.closeSearch()
+                             }
+                         ){
+-                            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Close Search")
++                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close Search")
+                         }
+                         Spacer(Modifier.width(12.dp))
+                         TextField(
+@@ -283,7 +299,7 @@ fun HomePage(
+                         onClick = { layoutDialogOpen = true }
+                     ) {
+                         Icon(
+-                            imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.Filled.ViewList,
++                            imageVector = if (settingsPrefs.layout == ItemLayout.GRID.ordinal) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
+                             contentDescription = stringResource(
+                                 id = R.string.layout
+                             )
+@@ -291,14 +307,29 @@ fun HomePage(
+                     }
+                     NPSIconButton(
+                         tooltip = "Download queue",
+-                        onClick = { /*TODO*/ }
++                        onClick = navigateToDownloads,
++                        badge = {
++                            val count = packageDetailsViewModel.downloadManager.queueState.collectAsStateWithLifecycle().value.count()
++                            if (count > 0) {
++                                Badge(
++                                    containerColor = ColorTag,
++                                    contentColor = Color.Black,
++                                ) {
++                                    Text(
++                                        text = count.toString(),
++                                        fontWeight = FontWeight.Bold,
++                                        fontFamily = readexProFamily
++                                    )
++                                }
++                            }
++                        }
+                     ) {
+                         Icon(imageVector = Icons.Filled.Downloading, contentDescription = "Download queue")
+                     }
+                     NPSIconButton(
+                         tooltip = stringResource(id = R.string.title_activity_settings),
+                         onClick = { navigateToSettings() }
+-                    ){
++                    ) {
+                         Icon(
+                             imageVector = Icons.Filled.Settings,
+                             contentDescription = stringResource(
+@@ -610,7 +641,7 @@ fun Tag(title: String, small: Boolean = false) {
+     Box(
+         Modifier
+             .clip(RoundedCornerShape(4.dp))
+-            .background(Color(0xFFEAF654))
++            .background(ColorTag)
+             .layoutId("tag")
+             .padding(horizontal = if (small) 6.dp else 8.dp, vertical = if (small) 2.dp else 4.dp)
+     ) {
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/NPSApp.kt b/app/src/main/java/com/illusionware/npsbrowser/NPSApp.kt
+index 0bbf593..7713271 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/NPSApp.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/NPSApp.kt
+@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.Preferences
+ import androidx.datastore.preferences.preferencesDataStore
+ import com.illusionware.npsbrowser.data.OnboardingPreferencesRepository
+ import com.illusionware.npsbrowser.data.SettingsPreferencesRepository
++import com.illusionware.npsbrowser.data.download.DownloadManager
++import com.illusionware.npsbrowser.data.notification.Notifications
+ 
+ @OptIn(ExperimentalUnsignedTypes::class)
+ val HMAC_KEY = ubyteArrayOf(
+@@ -22,10 +24,15 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+ class NPSApp: Application() {
+     lateinit var settingsPreferencesRepository: SettingsPreferencesRepository
+     lateinit var onboardingPreferencesRepository: OnboardingPreferencesRepository
++    lateinit var downloadManager: DownloadManager
+ 
+     override fun onCreate() {
+         super.onCreate()
+         settingsPreferencesRepository = SettingsPreferencesRepository(dataStore)
+         onboardingPreferencesRepository = OnboardingPreferencesRepository(dataStore)
++//        downloader = Downloader(this)
++        downloadManager = DownloadManager(this)
++
++        Notifications.initialize(this)
+     }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/Routes.kt b/app/src/main/java/com/illusionware/npsbrowser/Routes.kt
+index 2d6b6f0..281d194 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/Routes.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/Routes.kt
+@@ -1,8 +1,9 @@
+ package com.illusionware.npsbrowser
+ 
+ sealed class Routes(val route: String) {
+-    object Home : Routes("home")
+-    object Onboarding : Routes("onboarding")
+-    object Settings : Routes("settings")
+-    object PackageDetails : Routes("package_details")
++    data object Home : Routes("home")
++    data object Onboarding : Routes("onboarding")
++    data object Settings : Routes("settings")
++    data object PackageDetails : Routes("package_details")
++    data object Downloads : Routes("downloads")
+ }
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/SettingsPreferencesRepository.kt b/app/src/main/java/com/illusionware/npsbrowser/data/SettingsPreferencesRepository.kt
+index 8151a41..e330e6a 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/data/SettingsPreferencesRepository.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/SettingsPreferencesRepository.kt
+@@ -207,4 +207,4 @@ class SettingsPreferencesRepository(
+             prefs[PKG2ZIP_AUTO_DECRYPT] ?: true,
+         )
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadManager.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadManager.kt
+new file mode 100644
+index 0000000..01c0a59
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadManager.kt
+@@ -0,0 +1,85 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.content.Context
++import kotlinx.coroutines.ExperimentalCoroutinesApi
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.asFlow
++import kotlinx.coroutines.flow.drop
++import kotlinx.coroutines.flow.emitAll
++import kotlinx.coroutines.flow.flatMapLatest
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.merge
++import kotlinx.coroutines.flow.onStart
++
++class DownloadManager(private val context: Context) {
++    private val downloader = Downloader(context, this)
++
++    val queueState
++        get() = downloader.queueState
++
++    fun downloaderStart() = downloader.start()
++    fun downloaderStop(reason: String? = null) = downloader.stop(reason)
++
++    val isDownloaderRunning
++        get() = DownloadService.isRunning
++    val isDownloaderPaused
++        get() = downloader.isPaused
++
++    fun startDownloads() {
++        if (DownloadService.isRunning(context)) {
++            return
++        }
++        DownloadService.start(context, this)
++    }
++
++    fun pauseDownload(url: String) = downloader.pause(url)
++    fun resumeDownload(url: String) = downloader.resume(url)
++
++    fun pauseDownloads() {
++        downloader.pauseAll()
++        downloader.stop()
++    }
++
++    fun download(package_: NPSPackageDownload, autoStart: Boolean = true) {
++        downloader.enqueue(package_, autoStart)
++    }
++
++    fun cancelDownload(url: String) {
++        val wasRunning = downloader.isRunning
++//        if (wasRunning) {
++//            downloader.pauseAll()
++//        }
++
++        downloader.removeDownload(url)
++
++        if (wasRunning && queueState.value.isEmpty()) {
++            downloader.stop()
++        }
++    }
++
++    @OptIn(ExperimentalCoroutinesApi::class)
++    fun statusFlow(): Flow<NPSPackageDownload> = queueState
++        .flatMapLatest { downloads ->
++            downloads
++                .map { download ->
++                    download.statusFlow.drop(1).map { download }
++                }
++                .merge()
++        }
++        .onStart {
++            emitAll(queueState.value.filter { download -> download.status == NPSPackageDownload.State.DOWNLOADING }.asFlow())
++        }
++
++    @OptIn(ExperimentalCoroutinesApi::class)
++    fun progressFlow(): Flow<NPSPackageDownload> = queueState
++        .flatMapLatest { downloads ->
++            downloads
++                .map { download ->
++                    download.progressFlow.drop(1).map { download }
++                }
++                .merge()
++        }
++        .onStart {
++            emitAll(queueState.value.filter { download -> download.status == NPSPackageDownload.State.DOWNLOADING }.asFlow())
++        }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadNotifier.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadNotifier.kt
+new file mode 100644
+index 0000000..2e11521
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadNotifier.kt
+@@ -0,0 +1,187 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.content.Context
++import android.util.Log
++import androidx.core.app.NotificationCompat
++import com.illusionware.npsbrowser.data.notification.Notifications
++import com.illusionware.npsbrowser.util.system.cancelNotification
++import com.illusionware.npsbrowser.util.system.notificationBuilder
++import com.illusionware.npsbrowser.util.system.notify
++
++/**
++ * DownloadNotifier is used to show notifications when downloading one or multiple chapters.
++ *
++ * @param context context of application
++ */
++internal class DownloadNotifier(private val context: Context) {
++
++    private val progressNotificationBuilder by lazy {
++        context.notificationBuilder(Notifications.CHANNEL_DOWNLOADER) {
++//            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher))
++            setAutoCancel(false)
++            setOnlyAlertOnce(true)
++        }
++    }
++
++    private val errorNotificationBuilder by lazy {
++        context.notificationBuilder(Notifications.CHANNEL_DOWNLOADER) {
++            setAutoCancel(false)
++        }
++    }
++
++    /**
++     * Status of download. Used for correct notification icon.
++     */
++    private var isDownloading = false
++
++    /**
++     * Shows a notification from this builder.
++     *
++     * @param id the id of the notification.
++     */
++    private fun NotificationCompat.Builder.show(id: Int) {
++        context.notify(id, build())
++    }
++
++    /**
++     * Dismiss the downloader's notification. Downloader error notifications use a different id, so
++     * those can only be dismissed by the user.
++     */
++    private fun dismissProgress() {
++        context.cancelNotification(Notifications.ID_DOWNLOADER_GROUP)
++    }
++
++    /**
++     * Called when download progress changes.
++     *
++     * @param download download object containing download information.
++     */
++    fun onProgressChange(size: Long, progress: Long) {
++        with(progressNotificationBuilder) {
++            if (!isDownloading) {
++                setSmallIcon(android.R.drawable.stat_sys_download)
++                clearActions()
++                // Open download manager when clicked
++//                setContentIntent(NotificationHandler.openDownloadManagerPendingActivity(context))
++                isDownloading = true
++                // Pause action
++//                addAction(
++//                    R.drawable.ic_pause_24dp,
++//                    context.getString(R.string.action_pause),
++//                    NotificationReceiver.pauseDownloadsPendingBroadcast(context),
++//                )
++            }
++
++//            val downloadingProgressText = context.getString(
++//                R.string.chapter_downloading_progress,
++//                download.downloadedImages,
++//                download.pages!!.size,
++//            )
++
++//            setContentTitle("Downloading ${download.name}")
++            setContentText("${progress / 1024 / 1024}MB / ${size / 1024 / 1024}MB")
++
++            setProgress((size / 1024).toInt(), (progress / 1024).toInt(), false)
++            setOngoing(true)
++
++//            Log.d("DOWNLOAD", progress.toString())
++
++            show(Notifications.ID_DOWNLOADER_GROUP)
++        }
++    }
++
++    /**
++     * Show notification when download is paused.
++     */
++//    fun onPaused() {
++//        with(progressNotificationBuilder) {
++//            setContentTitle(context.getString(R.string.chapter_paused))
++//            setContentText(context.getString(R.string.download_notifier_download_paused))
++//            setSmallIcon(R.drawable.ic_pause_24dp)
++//            setProgress(0, 0, false)
++//            setOngoing(false)
++//            clearActions()
++//            // Open download manager when clicked
++//            setContentIntent(NotificationHandler.openDownloadManagerPendingActivity(context))
++//            // Resume action
++//            addAction(
++//                R.drawable.ic_play_arrow_24dp,
++//                context.getString(R.string.action_resume),
++//                NotificationReceiver.resumeDownloadsPendingBroadcast(context),
++//            )
++//            // Clear action
++//            addAction(
++//                R.drawable.ic_close_24dp,
++//                context.getString(R.string.action_cancel_all),
++//                NotificationReceiver.clearDownloadsPendingBroadcast(context),
++//            )
++//
++//            show(Notifications.ID_DOWNLOAD_CHAPTER_PROGRESS)
++//        }
++//
++//        // Reset initial values
++//        isDownloading = false
++//    }
++
++    /**
++     * Resets the state once downloads are completed.
++     */
++    fun onComplete() {
++        dismissProgress()
++
++        // Reset states to default
++        isDownloading = false
++    }
++
++    /**
++     * Called when the downloader receives a warning.
++     *
++     * @param reason the text to show.
++     * @param timeout duration after which to automatically dismiss the notification.
++     * Only works on Android 8+.
++     */
++//    fun onWarning(reason: String, timeout: Long? = null, contentIntent: PendingIntent? = null) {
++//        with(errorNotificationBuilder) {
++//            setContentTitle(context.getString(R.string.download_notifier_downloader_title))
++//            setStyle(NotificationCompat.BigTextStyle().bigText(reason))
++//            setSmallIcon(R.drawable.ic_warning_white_24dp)
++//            setAutoCancel(true)
++//            clearActions()
++//            setContentIntent(NotificationHandler.openDownloadManagerPendingActivity(context))
++//            setProgress(0, 0, false)
++//            timeout?.let { setTimeoutAfter(it) }
++//            contentIntent?.let { setContentIntent(it) }
++//
++//            show(Notifications.ID_DOWNLOAD_CHAPTER_ERROR)
++//        }
++//
++//        // Reset download information
++//        isDownloading = false
++//    }
++
++    /**
++     * Called when the downloader receives an error. It's shown as a separate notification to avoid
++     * being overwritten.
++     *
++     * @param error string containing error information.
++     * @param chapter string containing chapter title.
++     */
++//    fun onError(error: String? = null, chapter: String? = null, mangaTitle: String? = null) {
++//        // Create notification
++//        with(errorNotificationBuilder) {
++//            setContentTitle(
++//                mangaTitle?.plus(": $chapter") ?: context.getString(R.string.download_notifier_downloader_title),
++//            )
++//            setContentText(error ?: context.getString(R.string.download_notifier_unknown_error))
++//            setSmallIcon(R.drawable.ic_warning_white_24dp)
++//            clearActions()
++//            setContentIntent(NotificationHandler.openDownloadManagerPendingActivity(context))
++//            setProgress(0, 0, false)
++//
++//            show(Notifications.ID_DOWNLOAD_CHAPTER_ERROR)
++//        }
++//
++//        // Reset download information
++//        isDownloading = false
++//    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadRepository.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadRepository.kt
+new file mode 100644
+index 0000000..50fd8c5
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadRepository.kt
+@@ -0,0 +1,24 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.content.Context
++import androidx.annotation.WorkerThread
++import kotlinx.coroutines.flow.map
++
++class DownloadRepository(private val downloadDAO: NPSPackageDownloadDao) {
++    val allDownloads = downloadDAO.getAll()
++
++    @WorkerThread
++    suspend fun insert(download: NPSPackageDownload) {
++        downloadDAO.insert(download)
++    }
++
++    @WorkerThread
++    suspend fun delete(url: String) {
++        downloadDAO.delete(url)
++    }
++
++    @WorkerThread
++    suspend fun deleteAll() {
++        downloadDAO.deleteAll()
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadService.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadService.kt
+new file mode 100644
+index 0000000..0e05cbd
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadService.kt
+@@ -0,0 +1,116 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.app.Notification
++import android.app.Service
++import android.content.Context
++import android.content.Intent
++import android.os.IBinder
++import android.os.PowerManager.WakeLock
++import android.util.Log
++import androidx.core.content.ContextCompat
++import com.illusionware.npsbrowser.data.notification.Notifications
++import com.illusionware.npsbrowser.util.system.acquireWakeLock
++import com.illusionware.npsbrowser.util.system.isOnline
++import com.illusionware.npsbrowser.util.system.isServiceRunning
++import com.illusionware.npsbrowser.util.system.notificationBuilder
++import com.illusionware.npsbrowser.util.system.toast
++import com.illusionware.npsbrowser.util.system.withUIContext
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.cancel
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.catch
++import kotlinx.coroutines.flow.launchIn
++import kotlinx.coroutines.flow.onEach
++import ru.beryukhov.reactivenetwork.ReactiveNetwork
++
++class DownloadService : Service() {
++    companion object {
++        private lateinit var _downloadManager: DownloadManager
++        private val _isRunning = MutableStateFlow(false)
++        val isRunning = _isRunning.asStateFlow()
++
++        fun start(context: Context, downloadManager: DownloadManager) {
++            Log.d("DOWNLOAD", "Starting download service")
++            val intent = Intent(context, DownloadService::class.java)
++            _downloadManager = downloadManager
++            ContextCompat.startForegroundService(context, intent)
++        }
++
++        fun stop(context: Context) {
++            context.stopService(Intent(context, DownloadService::class.java))
++        }
++
++        fun isRunning(context: Context): Boolean {
++            return context.isServiceRunning(DownloadService::class.java)
++        }
++    }
++
++    private lateinit var wakeLock: WakeLock
++
++    private lateinit var scope: CoroutineScope
++
++    override fun onCreate() {
++        Log.d("DOWNLOAD", "In onCreate, acquring wakelock")
++        super.onCreate()
++        scope = CoroutineScope(Dispatchers.IO)
++        startForeground(Notifications.ID_DOWNLOADER_GROUP, getPlaceholderNotification())
++        wakeLock = acquireWakeLock(javaClass.name)
++        _isRunning.value = true
++        listenNetworkChanges()
++    }
++
++    override fun onDestroy() {
++        super.onDestroy()
++        scope.cancel()
++        _isRunning.value = false
++        _downloadManager.downloaderStop()
++        if (wakeLock.isHeld) {
++            wakeLock.release()
++        }
++    }
++
++    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
++        return START_NOT_STICKY
++    }
++
++    override fun onBind(p0: Intent?): IBinder? {
++        return null
++    }
++
++    private fun downloaderStop(string: String) {
++        _downloadManager.downloaderStop(string)
++    }
++
++    private fun listenNetworkChanges() {
++        Log.d("DOWNLOAD", "Listening to network changes")
++        ReactiveNetwork()
++            .observeNetworkConnectivity(applicationContext)
++            .onEach {
++                withUIContext {
++                    if (isOnline()) {
++                        Log.d("DOWNLOAD", "We're online so we start the downloader")
++                        val started = _downloadManager.downloaderStart()
++                        if (!started) stopSelf()
++                    } else {
++                        downloaderStop("Not connected to the internet")
++                    }
++                }
++            }
++            .catch { error ->
++                withUIContext {
++//                    logcat(LogPriority.ERROR, error)
++                    toast("Download failed: $error")
++                    stopSelf()
++                }
++            }
++            .launchIn(scope)
++    }
++
++    private fun getPlaceholderNotification(): Notification {
++        return notificationBuilder(Notifications.CHANNEL_DOWNLOADER) {
++            setContentTitle("Starting download")
++        }.build()
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadStore.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadStore.kt
+new file mode 100644
+index 0000000..b26b504
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/DownloadStore.kt
+@@ -0,0 +1,130 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.content.Context
++import android.util.Log
++import androidx.room.ColumnInfo
++import androidx.room.Dao
++import androidx.room.Database
++import androidx.room.Entity
++import androidx.room.Insert
++import androidx.room.OnConflictStrategy
++import androidx.room.PrimaryKey
++import androidx.room.Query
++import androidx.room.Room
++import androidx.room.RoomDatabase
++import androidx.room.Update
++import com.illusionware.npsbrowser.data.network.ProgressListener
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++private const val DOWNLOAD_STORE_NAME = "downloads"
++private const val DOWNLOAD_TABLE_NAME = "download"
++private const val DOWNLOADED_TABLE_NAME = "downloaded"
++
++// TODO: We need to implement a downloaded table
++
++@Entity(tableName = DOWNLOAD_TABLE_NAME)
++data class NPSPackageDownload(
++    @PrimaryKey @ColumnInfo(name = "url")
++    val url: String,
++    val titleId: String,
++    val name: String,
++    val sha256: String?,
++    val size: Long,
++    var bytesDownloaded: Long,
++    val createdAt: Long,
++): ProgressListener {
++    @Transient
++    private val _statusFlow = MutableStateFlow(State.PAUSED)
++
++    @Transient
++    val statusFlow = _statusFlow.asStateFlow()
++    var status: State
++        get() = _statusFlow.value
++        set(status) {
++            _statusFlow.value = status
++        }
++
++    @Transient
++    private val _progressFlow = MutableStateFlow(bytesDownloaded.toFloat() / size.toFloat())
++
++    @Transient
++    var progressFlow = _progressFlow.asStateFlow()
++    private var progress: Float
++        get() = _progressFlow.value
++        set(value) {
++            _progressFlow.value = value
++        }
++
++    @Transient
++    private val _bytesReadFlow = MutableStateFlow(bytesDownloaded)
++
++    @Transient
++    var bytesDownloadedFlow = _bytesReadFlow.asStateFlow()
++    private var bytesRead: Long
++        get() = _bytesReadFlow.value
++        set(value) {
++            _bytesReadFlow.value = value
++        }
++
++
++    enum class State(val value: Int) {
++        PAUSED(0),
++        QUEUE(1),
++        DOWNLOADING(2),
++        DOWNLOADED(3),
++        ERROR(4),
++    }
++
++    override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
++        progress = if (contentLength > 0) {
++            (bytesRead.toFloat() / size.toFloat())
++        } else {
++            0.0f
++        }
++
++        bytesDownloaded = bytesRead
++        this.bytesRead = bytesRead
++    }
++}
++
++@Dao
++interface NPSPackageDownloadDao {
++    @Query("SELECT * FROM download ORDER BY createdAt ASC")
++    fun getAll(): Flow<List<NPSPackageDownload>>
++
++    @Insert(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun insert(download: NPSPackageDownload)
++
++    @Update(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun update(download: NPSPackageDownload)
++
++    @Query("DELETE FROM download WHERE url = :url")
++    suspend fun delete(url: String)
++
++    @Query("DELETE FROM download")
++    suspend fun deleteAll()
++}
++
++@Database(entities = [NPSPackageDownload::class], version = 1)
++abstract class DownloadStore : RoomDatabase() {
++    abstract fun downloadDao(): NPSPackageDownloadDao
++
++    companion object {
++        @Volatile
++        private var INSTANCE: DownloadStore? = null
++
++        fun getDatabase(context: Context): DownloadStore {
++            return INSTANCE ?: synchronized(this) {
++                val instance = Room.databaseBuilder(
++                    context.applicationContext,
++                    DownloadStore::class.java,
++                    DOWNLOAD_STORE_NAME
++                ).build()
++                INSTANCE = instance
++                instance
++            }
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/download/Downloader.kt b/app/src/main/java/com/illusionware/npsbrowser/data/download/Downloader.kt
+new file mode 100644
+index 0000000..0cb4041
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/download/Downloader.kt
+@@ -0,0 +1,448 @@
++package com.illusionware.npsbrowser.data.download
++
++import android.content.Context
++import android.util.Log
++import com.illusionware.npsbrowser.data.defaultDownloadDir
++import com.illusionware.npsbrowser.data.network.GET
++import com.illusionware.npsbrowser.data.network.NetworkHelper
++import com.illusionware.npsbrowser.data.network.ProgressListener
++import com.illusionware.npsbrowser.data.network.awaitSuccess
++import com.illusionware.npsbrowser.data.network.newCachelessCallWithProgress
++import com.illusionware.npsbrowser.util.system.saveTo
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.CoroutineStart
++import kotlinx.coroutines.DelicateCoroutinesApi
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.ExperimentalCoroutinesApi
++import kotlinx.coroutines.GlobalScope
++import kotlinx.coroutines.Job
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.collectLatest
++import kotlinx.coroutines.flow.combine
++import kotlinx.coroutines.flow.distinctUntilChanged
++import kotlinx.coroutines.flow.filter
++import kotlinx.coroutines.flow.first
++import kotlinx.coroutines.flow.transformLatest
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.supervisorScope
++import kotlinx.coroutines.withContext
++import okhttp3.Headers
++import okio.appendingSink
++import okio.buffer
++import java.io.File
++
++// TODO: We need to fix the status of pending downloads because if we have 2 downloads in the queue,
++// and they're both paused and we try to resume the 2nd one, it will start downloading the 1st one
++// instead because the flow just emits the first one in the queue. A possible solution would be if
++// the 1st/higher priority download is paused, and we resume the 2nd/low priority one, we should
++// just reorder the 2nd one to the top and resume it.
++// the proper solution is to put whatever download we start/resume at a higher priority than all
++// the paused downloads I think.
++
++// TODO: fix the countless bugs with pausing and resuming downloads
++
++
++// TODO: notifications along with their actions and stuff
++
++// TODO: setting to control how many active downloads there can be
++
++class Downloader(val context: Context, private val downloadManager: DownloadManager) {
++
++    private val store = DownloadStore.getDatabase(context)
++    private val networkHelper = NetworkHelper(context)
++
++    private val _queueState = MutableStateFlow<List<NPSPackageDownload>>(emptyList())
++    val queueState = _queueState.asStateFlow()
++
++    private var downloaderJob: Job? = null
++    private val notifier by lazy { DownloadNotifier(context) }
++
++    private val downloadJobs = mutableMapOf<String, Job>()
++
++    private val scope = CoroutineScope(Dispatchers.IO)
++
++    val isRunning: Boolean
++        get() = downloaderJob?.isActive ?: false
++
++    @Volatile
++    var isPaused: Boolean = false
++
++    init {
++        scope.launch(Dispatchers.IO) {
++            val storeItems = store.downloadDao().getAll().first()
++//            Log.d("DOWNLOAD", "Loaded ${storeItems.size} downloads from database")
++//            Log.d("DOWNLOAD", "Loaded $storeItems from database")
++            addAllToQueue(storeItems)
++        }
++    }
++
++    @OptIn(DelicateCoroutinesApi::class)
++    fun launchIO(block: suspend CoroutineScope.() -> Unit): Job =
++        GlobalScope.launch(Dispatchers.IO, CoroutineStart.DEFAULT, block)
++
++    fun enqueue(download: NPSPackageDownload, autoStart: Boolean) = launchIO {
++        store.downloadDao().insert(download)
++
++        val wasEmpty = queueState.value.isEmpty()
++
++        _queueState.update {
++            download.status = NPSPackageDownload.State.QUEUE
++            it + download
++        }
++
++        if (autoStart && !DownloadService.isRunning(context)) {
++            DownloadService.start(context, downloadManager)
++        }
++    }
++
++    fun start(): Boolean {
++        if (isRunning || queueState.value.isEmpty()) {
++//            Log.d("DOWNLOAD", "Downloader is already running or queue is empty")
++            return false
++        }
++
++        val pending = queueState.value.filter { it.status != NPSPackageDownload.State.DOWNLOADED }
++//        Log.d("DOWNLOAD", "Starting downloader job with ${pending.size} pending downloads")
++//        Log.d("DOWNLOAD", "Pending are $pending")
++        pending.forEach { if (it.status != NPSPackageDownload.State.QUEUE) it.status = NPSPackageDownload.State.QUEUE }
++
++        isPaused = false
++
++        launchDownloaderJob()
++
++        return pending.isNotEmpty()
++    }
++
++    fun pauseAll() {
++        cancelDownloaderJob()
++        queueState.value
++            .filter { it.status == NPSPackageDownload.State.DOWNLOADING || it.status == NPSPackageDownload.State.QUEUE }
++            .forEach { it.status = NPSPackageDownload.State.PAUSED }
++        isPaused = true
++    }
++
++    fun stop(reason: String? = null) {
++        cancelDownloaderJob()
++        queueState.value
++            .filter { it.status == NPSPackageDownload.State.DOWNLOADING }
++            .forEach { it.status = NPSPackageDownload.State.ERROR }
++
++        queueState.value
++            .filter { it.status == NPSPackageDownload.State.QUEUE }
++            .forEach { it.status = NPSPackageDownload.State.PAUSED }
++
++        if (reason != null) {
++//            notifier.notifyError(reason)
++            return
++        }
++
++        if (isPaused && queueState.value.isNotEmpty()) {
++//            notifier.notifyPaused()
++        } else {
++//            notifier.notifyFinished()
++        }
++
++        isPaused = false
++
++        // Prevent recursion when DownloadService.onDestroy() calls downloader.stop()
++        if (DownloadService.isRunning.value) {
++            DownloadService.stop(context)
++        }
++    }
++
++    fun pause(url: String) {
++        queueState.value
++            .filter { it.url == url }
++            .forEach { it.status = NPSPackageDownload.State.PAUSED }
++//        _queueState.update { it }
++
++        downloadJobs[url]?.cancel()
++
++        if (areAllPaused()) {
++            stop()
++        }
++    }
++
++    fun resume(url: String) {
++        if (queueState.value.isEmpty()) {
++            Log.e("DOWNLOAD", "Can't resume because queue is empty")
++            return
++        }
++
++        // seems like this doesn't work ??
++//        queueState.value
++//            .filter { it.url == url }
++//            .forEach { it.status = NPSPackageDownload.State.QUEUE }
++
++        // and this does
++        _queueState.update { list ->
++            list.filter { it.url != url } + list.filter { it.url == url }.map {
++                it.status = NPSPackageDownload.State.QUEUE
++                it
++            }
++        }
++
++//        _queueState.update { list -> list.sortedByDescending { it.status.value } }
++//        scope.launch {
++//            _queueState.emit(queueState.value)
++//        }
++
++        // TODO: this kinda works, theres a desync bug again
++        //  it also reorders them when theres a download already running
++        //  idfk
++        cancelDownloaderJob()
++        launchDownloaderJob()
++
++//        queueState.value.sortedByDescending { it.status.value }
++
++//        if (!isRunning) {
++//            launchDownloaderJob()
++//        }
++
++        // TODO: resume a single download
++    }
++
++    @OptIn(ExperimentalCoroutinesApi::class)
++    private fun launchDownloaderJob() {
++        if (isRunning) return
++//        Log.d("DOWNLOAD", "Starting downloader job")
++
++        downloaderJob = scope.launch {
++            val activeDownloadsFlow = queueState.transformLatest { queue ->
++//                Log.d("DOWNLOAD", "transforming ${queueState.value}")
++                while (true) {
++//                    Log.d("DOWNLOAD", "inside the transformLatest loop")
++                    val activeDownloads = queue
++                        .filter { it.status == NPSPackageDownload.State.DOWNLOADING || it.status == NPSPackageDownload.State.QUEUE }
++                        .take(1)
++
++                    emit(activeDownloads)
++
++                    if (activeDownloads.isEmpty()) break
++//                    Log.d("DOWNLOAD", "emitting ${activeDownloads[0].name}")
++
++                    val activeDownloadsErroredFlow =
++                        combine(activeDownloads.map(NPSPackageDownload::statusFlow)) { states ->
++                            states.contains(NPSPackageDownload.State.ERROR)
++                        }.filter { it }
++
++//                    Log.d("DOWNLOAD", "errored flow ${activeDownloadsErroredFlow.first()}")
++                    activeDownloadsErroredFlow.first()
++                }
++            }.distinctUntilChanged()
++
++//            Log.d("DOWNLOAD", "left the transformLatest loop")
++//            Log.d("DOWNLOAD", activeDownloadsFlow.first().toString())
++
++//            activeDownloadsFlow.collectLatest { activeDownload ->
++//                launchDownloadJob(activeDownload)
++//            }
++
++
++            supervisorScope {
++                activeDownloadsFlow.collectLatest { activeDownloads ->
++//                    Log.d("DOWNLOAD", "collected : $activeDownloads")
++                    val downloadJobsToStop = downloadJobs.filter { job ->
++                        activeDownloads.any { it.url == job.key }
++                    }
++                    downloadJobsToStop.forEach { (url, job) ->
++//                        Log.d("DOWNLOAD", "Removing download job for $url from map")
++                        job.cancel()
++                        downloadJobs.remove(url)
++                    }
++
++                    val downloadsToStart = activeDownloads.filter { it.url !in downloadJobs }
++                    downloadsToStart.forEach { download ->
++                        val job = launchDownloadJob(download)
++                        downloadJobs[download.url] = job
++
++                        job.invokeOnCompletion { cause ->
++                            if (cause is CancellationException) {
++//                                Log.d("DOWNLOAD", "child job got cancelled")
++                                scope.launch(Dispatchers.IO) {
++                                    store.downloadDao().update(download)
++                                }
++                            }
++                        }
++
++                        downloaderJob?.invokeOnCompletion { cause ->
++//                            Log.d("DOWNLOAD", "completion")
++                            if (cause is CancellationException) {
++//                                Log.d("DOWNLOAD", "I JUST FUCKING CANCELLED THE DAMN THING")
++                                job.cancel()
++                            }
++                        }
++                    }
++
++//                    activeDownloads.forEach { download ->
++//                        try {
++//                            val job = launchDownloadJob(download)
++//
++//                            downloadJobs.add(job)
++//
++//                            downloaderJob?.invokeOnCompletion { cause ->
++//                                Log.d("DOWNLOAD", "completion")
++//                                if (cause is CancellationException) {
++//                                    Log.d("DOWNLOAD", "I JUST FUCKING CANCELLED THE DAMN THING")
++//                                    job.cancel()
++//                                }
++//                            }
++//                        } catch (e: Throwable) {
++//                            if (e is CancellationException) {
++//                                Log.d("DOWNLOAD", "cancellation exception inside supervisor: $e")
++//                                throw e
++//                            }
++//                        }
++//                    }
++                }
++//                downloadJobs.joinAll()
++            }
++        }
++    }
++
++    private suspend fun launchDownloadJob(download: NPSPackageDownload) = launchIO {
++        try {
++//            Log.d("DOWNLOAD", "Starting download for ${download.name}")
++            downloadPackage(download, this)
++
++            // Remove successful download from queue
++            if (download.status == NPSPackageDownload.State.DOWNLOADED) {
++//                Log.d("DOWNLOAD", "removing ${download.name} from queue")
++                removeFromQueue(download)
++            }
++            if (areAllDownloadsFinished()) {
++//                Log.d("DOWNLOAD", "ALL DOWNLOADS FINISHED. STOPPING")
++                stop()
++            }
++        } catch (e: Throwable) {
++            if (e is CancellationException) {
++//                Log.d("DOWNLOAD", "cancellation exception: $e")
++//                Log.d("DOWNLOAD", "CANCELLING CHILD COROUTINE")
++//                store.downloadDao().update(download)
++                throw e
++            }
++//            logcat(LogPriority.ERROR, e)
++//            notifier.onError(e.message)
++            stop()
++        }
++    }
++
++    private val progressListener = object : ProgressListener {
++        var savedProgress = 0L
++
++        var lastTick = 0L
++
++        override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
++//            Log.d("DOWNLOAD", "Progress: $bytesRead / $contentLength")
++            val progress = (100 * (bytesRead.toFloat() / contentLength.toFloat())).toLong()
++            val currentTime = System.currentTimeMillis()
++            if (progress > savedProgress && currentTime - 200 > lastTick) {
++                savedProgress = progress
++                lastTick = currentTime
++            }
++
++            notifier.onProgressChange(contentLength, bytesRead)
++        }
++    }
++
++    private suspend fun downloadPackage(download: NPSPackageDownload, scope: CoroutineScope) {
++        download.status = NPSPackageDownload.State.DOWNLOADING
++
++        val res = networkHelper.client.newCachelessCallWithProgress(
++            GET(download.url, Headers.headersOf("Range", "bytes=${download.bytesDownloaded}-")),
++            download,
++            download.bytesDownloaded
++        ).awaitSuccess()
++        val file = File("${defaultDownloadDir}/${download.titleId}")
++        val fileBufferedSink = file.appendingSink().buffer()
++
++        try {
++//            Log.d("DOWNLOAD", "Saving file to ${defaultDownloadDir}/${download.titleId}")
++
++            if (res.body!!.source().saveTo(
++                    fileBufferedSink,
++                    res.body!!.contentLength(),
++                    download.bytesDownloaded,
++                    scope
++                )
++            ) {
++                download.status = NPSPackageDownload.State.DOWNLOADED
++            }
++
++        } catch (e: Exception) {
++            if (e is CancellationException) {
++//                Log.d("DOWNLOAD", "download func cancellation exception: $e")
++                throw e
++            }
++            download.status = NPSPackageDownload.State.ERROR
++            res.close()
++//            Log.d("DOWNLOAD", "Download failed for ${download.name}")
++//            Log.d("DOWNLOAD", "Exception: $e")
++            throw e
++        } finally {
++//            outputStream?.close()
++            withContext(Dispatchers.IO) {
++                fileBufferedSink.close()
++            }
++        }
++    }
++
++    private fun cancelDownloaderJob() {
++        downloaderJob?.cancel()
++        downloaderJob = null
++//        Log.d("DOWNLOAD", "Downloader job canceled")
++    }
++
++    private fun areAllDownloadsFinished(): Boolean {
++        return queueState.value.isEmpty()
++    }
++
++    private fun areAllPaused(): Boolean {
++        return queueState.value.all { it.status == NPSPackageDownload.State.PAUSED }
++    }
++
++    private fun addAllToQueue(downloads: List<NPSPackageDownload>) {
++        _queueState.update {
++            downloads.forEach { download ->
++                download.status = NPSPackageDownload.State.PAUSED
++            }
++//            store.downloadDao().addAll(downloads)
++            downloads
++        }
++//        Log.d("DOWNLOAD", "enqueued something, current queue: ${queueState.value}")
++    }
++
++    // TODO: use this function to move the downloads that have successfully finished
++    // and keep the func below this for removal from the db when pressing the remove button
++    private fun moveFinishedDownloadsToDownloaded(downloads: List<NPSPackageDownload>) {
++        _queueState.update {
++            it - downloads
++        }
++    }
++
++    private fun removeFromQueue(download: NPSPackageDownload) {
++        _queueState.update {
++            scope.launch {
++                store.downloadDao().delete(download.url)
++            }
++            // TODO: is this useless???
++//            if (download.status == NPSPackageDownload.State.DOWNLOADING || download.status == NPSPackageDownload.State.QUEUE) {
++//                download.status = NPSPackageDownload.State.PAUSED
++//            }
++            it - download
++        }
++
++        downloadJobs.remove(download.url)
++    }
++
++    fun removeDownload(url: String) {
++        val download = queueState.value.find { it.url == url } ?: return
++        removeFromQueue(download)
++
++        val file = File("${defaultDownloadDir}/${download.titleId}")
++        file.delete()
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/network/NetworkHelper.kt b/app/src/main/java/com/illusionware/npsbrowser/data/network/NetworkHelper.kt
+new file mode 100644
+index 0000000..393c357
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/network/NetworkHelper.kt
+@@ -0,0 +1,25 @@
++package com.illusionware.npsbrowser.data.network
++
++import android.content.Context
++import okhttp3.Cache
++import okhttp3.OkHttpClient
++import java.io.File
++import java.util.concurrent.TimeUnit
++
++
++class NetworkHelper(context: Context) {
++    private val cacheDir = File(context.cacheDir, "network_cache")
++    private val cacheSize = 5L * 1024 * 1024 // 5 MiB
++
++    private val baseClientBuilder: OkHttpClient.Builder
++        get() {
++            val builder = OkHttpClient.Builder()
++                .connectTimeout(30, TimeUnit.SECONDS)
++                .readTimeout(30, TimeUnit.SECONDS)
++                .callTimeout(2, TimeUnit.MINUTES)
++
++            return builder
++        }
++
++    val client by lazy { baseClientBuilder.cache(Cache(cacheDir, cacheSize)).build() }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/network/OkHttpExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/data/network/OkHttpExtensions.kt
+new file mode 100644
+index 0000000..af06149
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/network/OkHttpExtensions.kt
+@@ -0,0 +1,131 @@
++package com.illusionware.npsbrowser.data.network
++
++import android.util.Log
++import kotlinx.coroutines.ExperimentalCoroutinesApi
++import kotlinx.coroutines.suspendCancellableCoroutine
++import okhttp3.Call
++import okhttp3.Callback
++import okhttp3.OkHttpClient
++import okhttp3.Request
++import okhttp3.Response
++import rx.Observable
++import rx.Producer
++import rx.Subscription
++import java.io.IOException
++import java.util.concurrent.atomic.AtomicBoolean
++import kotlin.coroutines.resumeWithException
++
++fun Call.asObservable(): Observable<Response> {
++    return Observable.unsafeCreate { subscriber ->
++        // Since Call is a one-shot type, clone it for each new subscriber.
++        val call = clone()
++
++        // Wrap the call in a helper which handles both unsubscription and backpressure.
++        val requestArbiter = object : AtomicBoolean(), Producer, Subscription {
++            override fun request(n: Long) {
++                if (n == 0L || !compareAndSet(false, true)) return
++
++                try {
++                    val response = call.execute()
++                    if (!subscriber.isUnsubscribed) {
++                        subscriber.onNext(response)
++                        subscriber.onCompleted()
++                    }
++                } catch (e: Exception) {
++                    if (!subscriber.isUnsubscribed) {
++                        subscriber.onError(e)
++                    }
++                }
++            }
++
++            override fun unsubscribe() {
++                call.cancel()
++            }
++
++            override fun isUnsubscribed(): Boolean {
++                return call.isCanceled()
++            }
++        }
++
++        subscriber.add(requestArbiter)
++        subscriber.setProducer(requestArbiter)
++    }
++}
++
++fun Call.asObservableSuccess(): Observable<Response> {
++    return asObservable().doOnNext { response ->
++        if (!response.isSuccessful) {
++            response.close()
++            throw HttpException(response.code)
++        }
++    }
++}
++
++// Based on https://github.com/gildor/kotlin-coroutines-okhttp
++@OptIn(ExperimentalCoroutinesApi::class)
++private suspend fun Call.await(callStack: Array<StackTraceElement>): Response {
++    Log.d("DOWNLOAD", "inside the await we want")
++    return suspendCancellableCoroutine { continuation ->
++        val callback =
++            object : Callback {
++                override fun onResponse(call: Call, response: Response) {
++                    continuation.resume(response) {
++                        response.body?.close()
++                    }
++                }
++
++                override fun onFailure(call: Call, e: IOException) {
++                    // Don't bother with resuming the continuation if it is already cancelled.
++                    if (continuation.isCancelled) return
++                    val exception = IOException(e.message, e).apply { stackTrace = callStack }
++                    continuation.resumeWithException(exception)
++                }
++            }
++
++        enqueue(callback)
++
++        continuation.invokeOnCancellation {
++            try {
++                Log.d("DOWNLOAD", "request is being cancelled")
++                cancel()
++            } catch (ex: Throwable) {
++                // Ignore cancel exception
++            }
++        }
++    }
++}
++
++suspend fun Call.await(): Response {
++    val callStack = Exception().stackTrace.run { copyOfRange(1, size) }
++    return await(callStack)
++}
++
++suspend fun Call.awaitSuccess(): Response {
++    val callStack = Exception().stackTrace.run { copyOfRange(1, size) }
++    val response = await(callStack)
++    if (!response.isSuccessful) {
++        response.close()
++        throw HttpException(response.code).apply { stackTrace = callStack }
++    }
++    return response
++}
++
++fun OkHttpClient.newCachelessCallWithProgress(
++    request: Request,
++    listener: ProgressListener,
++    bytesRead: Long
++): Call {
++    val progressClient = newBuilder()
++        .cache(null)
++        .addNetworkInterceptor { chain ->
++            val originalResponse = chain.proceed(chain.request())
++            originalResponse.newBuilder()
++                .body(ProgressResponseBody(originalResponse.body!!, listener, bytesRead))
++                .build()
++        }
++        .build()
++
++    return progressClient.newCall(request)
++}
++
++class HttpException(private val code: Int) : IllegalStateException("HTTP error $code")
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressListener.kt b/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressListener.kt
+new file mode 100644
+index 0000000..25c6643
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressListener.kt
+@@ -0,0 +1,5 @@
++package com.illusionware.npsbrowser.data.network
++
++interface ProgressListener {
++    fun update(bytesRead: Long, contentLength: Long, done: Boolean)
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressResponseBody.kt b/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressResponseBody.kt
+new file mode 100644
+index 0000000..cb5b4fd
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/network/ProgressResponseBody.kt
+@@ -0,0 +1,48 @@
++package com.illusionware.npsbrowser.data.network
++
++import okhttp3.MediaType
++import okhttp3.ResponseBody
++import okio.Buffer
++import okio.BufferedSource
++import okio.ForwardingSource
++import okio.Source
++import okio.buffer
++import java.io.IOException
++
++class ProgressResponseBody(
++    private val responseBody: ResponseBody,
++    private val progressListener: ProgressListener,
++    private val bytesRead: Long
++) : ResponseBody() {
++
++    private val bufferedSource: BufferedSource by lazy {
++        source(responseBody.source()).buffer()
++    }
++
++    override fun contentType(): MediaType? {
++        return responseBody.contentType()
++    }
++
++    override fun contentLength(): Long {
++        return responseBody.contentLength()
++    }
++
++    override fun source(): BufferedSource {
++        return bufferedSource
++    }
++
++    private fun source(source: Source): Source {
++        return object : ForwardingSource(source) {
++            var totalBytesRead = bytesRead
++
++            @Throws(IOException::class)
++            override fun read(sink: Buffer, byteCount: Long): Long {
++                val bytesRead = super.read(sink, byteCount)
++                // read() returns the number of bytes read, or -1 if this source is exhausted.
++                totalBytesRead += if (bytesRead != -1L) bytesRead else 0
++                progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1L)
++                return bytesRead
++            }
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/network/Requests.kt b/app/src/main/java/com/illusionware/npsbrowser/data/network/Requests.kt
+new file mode 100644
+index 0000000..1fc15af
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/network/Requests.kt
+@@ -0,0 +1,31 @@
++package com.illusionware.npsbrowser.data.network
++
++import okhttp3.CacheControl
++import okhttp3.Headers
++import okhttp3.HttpUrl
++import okhttp3.HttpUrl.Companion.toHttpUrl
++import okhttp3.Request
++import java.util.concurrent.TimeUnit
++
++private val DEFAULT_CACHE_CONTROL = CacheControl.Builder().maxAge(10, TimeUnit.MINUTES).build()
++private val DEFAULT_HEADERS = Headers.Builder().build()
++
++fun GET(
++    url: String,
++    headers: Headers = DEFAULT_HEADERS,
++    cache: CacheControl = DEFAULT_CACHE_CONTROL,
++): Request {
++    return GET(url.toHttpUrl(), headers, cache)
++}
++
++fun GET(
++    url: HttpUrl,
++    headers: Headers = DEFAULT_HEADERS,
++    cache: CacheControl = DEFAULT_CACHE_CONTROL,
++): Request {
++    return Request.Builder()
++        .url(url)
++        .headers(headers)
++        .cacheControl(cache)
++        .build()
++}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/data/notification/Notifications.kt b/app/src/main/java/com/illusionware/npsbrowser/data/notification/Notifications.kt
+new file mode 100644
+index 0000000..27e30b7
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/data/notification/Notifications.kt
+@@ -0,0 +1,30 @@
++package com.illusionware.npsbrowser.data.notification
++
++import android.content.Context
++import androidx.core.app.NotificationChannelCompat
++import androidx.core.app.NotificationChannelGroupCompat
++import androidx.core.app.NotificationManagerCompat
++
++object Notifications {
++    private const val GROUP_DOWNLOADER = "group_downloader"
++    const val CHANNEL_DOWNLOADER = "channel_downloader"
++    const val ID_DOWNLOADER_GROUP = 1
++
++    fun initialize(context: Context) {
++        val notificationManager = NotificationManagerCompat.from(context)
++
++        notificationManager.createNotificationChannelGroup(
++            NotificationChannelGroupCompat.Builder(GROUP_DOWNLOADER)
++                .setName("Download")
++                .build()
++        )
++
++        notificationManager.createNotificationChannel(
++            NotificationChannelCompat.Builder(CHANNEL_DOWNLOADER, NotificationManagerCompat.IMPORTANCE_LOW)
++                .setName("Progress")
++                .setShowBadge(false)
++                .setGroup(GROUP_DOWNLOADER)
++                .build()
++        )
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/model/PackageItem.kt b/app/src/main/java/com/illusionware/npsbrowser/model/PackageItem.kt
+index 291bc59..204959a 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/model/PackageItem.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/model/PackageItem.kt
+@@ -8,6 +8,7 @@ data class PackageItem(
+     val contentId: String?,
+     val modificationDate: String?,
+     val pkgSize: String,
++    val pkgSizeInBytes: ULong?,
+     val sha256: String?,
+     val zRif: String?,
+     val rap: String?,
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSAlertDialog.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSAlertDialog.kt
+index 5b264d8..d85bd58 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSAlertDialog.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSAlertDialog.kt
+@@ -2,14 +2,13 @@ package com.illusionware.npsbrowser.ui.components
+ 
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+-import androidx.compose.foundation.layout.ColumnScope
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.wrapContentHeight
+ import androidx.compose.foundation.layout.wrapContentWidth
+-import androidx.compose.material3.AlertDialog
+ import androidx.compose.material3.AlertDialogDefaults
++import androidx.compose.material3.BasicAlertDialog
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+@@ -28,7 +27,7 @@ fun NPSAlertDialog(
+     buttons: @Composable () -> Unit,
+     content: @Composable () -> Unit
+ ) {
+-    AlertDialog(
++    BasicAlertDialog(
+         onDismissRequest = onDismiss,
+     ) {
+         Surface (
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSIconButton.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSIconButton.kt
+index 18e6d5b..ec5eb43 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSIconButton.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/components/NPSIconButton.kt
+@@ -1,20 +1,77 @@
+ package com.illusionware.npsbrowser.ui.components
+ 
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.BoxScope
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.IconButton
+-import androidx.compose.material3.PlainTooltipBox
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TooltipBox
++import androidx.compose.material3.TooltipDefaults
++import androidx.compose.material3.rememberTooltipState
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.layout.Layout
++import androidx.compose.ui.layout.layoutId
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+-fun NPSIconButton(tooltip: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+-    PlainTooltipBox(tooltip = {
+-        Text(text = tooltip)
+-    }) {
+-        IconButton(onClick = onClick, Modifier.tooltipAnchor()) {
+-            content()
++fun NPSIconButton(
++    tooltip: String,
++    onClick: () -> Unit,
++    badge: (@Composable BoxScope.() -> Unit)? = null,
++    content: @Composable () -> Unit
++) {
++    Layout(
++        content = {
++            TooltipBox(
++                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
++                tooltip = {
++                    Text(text = tooltip)
++                },
++                state = rememberTooltipState(),
++            ) {
++                IconButton(
++                    onClick = onClick,
++                ) {
++                    content()
++                }
++            }
++            Box(Modifier.layoutId("badge")) {
++                badge?.let { it() }
++            }
++        }
++    ) { measurables, constraints ->
++        val iconPlaceable = measurables[0].measure(constraints)
++        val badgePlaceable = measurables.firstOrNull { it.layoutId == "badge" }?.measure(constraints)
++
++        layout(iconPlaceable.width, iconPlaceable.height) {
++            iconPlaceable.placeRelative(0, 0)
++            badgePlaceable?.placeRelative(
++                x = iconPlaceable.width - badgePlaceable.width - 16,
++                y = 16,
++            )
+         }
+     }
++
++//    PlainTooltipBox(tooltip = {
++//        Text(text = tooltip)
++//    }) {
++//        if (badge != null) {
++//            IconButton(
++//                onClick = onClick,
++//                Modifier.tooltipAnchor(),
++//            ) {
++//                BadgedBox(badge = badge) {
++//                    content()
++//                }
++//            }
++//        } else {
++//            IconButton(
++//                onClick = onClick,
++//                Modifier.tooltipAnchor(),
++//            ) {
++//                content()
++//            }
++//        }
++//    }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Downloads.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Downloads.kt
+new file mode 100644
+index 0000000..c5a554b
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Downloads.kt
+@@ -0,0 +1,266 @@
++package com.illusionware.npsbrowser.ui.screens
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.aspectRatio
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.statusBarsPadding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
++import androidx.compose.material.icons.filled.Clear
++import androidx.compose.material.icons.filled.Pause
++import androidx.compose.material.icons.filled.PlayArrow
++import androidx.compose.material.icons.filled.RestartAlt
++import androidx.compose.material3.Badge
++import androidx.compose.material3.ExtendedFloatingActionButton
++import androidx.compose.material3.Icon
++import androidx.compose.material3.LinearProgressIndicator
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Scaffold
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.StrokeCap
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.role
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.tooling.preview.Preview
++import androidx.compose.ui.unit.dp
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import androidx.lifecycle.viewmodel.compose.viewModel
++import com.illusionware.npsbrowser.data.download.NPSPackageDownload
++import com.illusionware.npsbrowser.ui.components.NPSIconButton
++import com.illusionware.npsbrowser.ui.theme.Typography
++import com.illusionware.npsbrowser.util.system.prettyByte
++import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
++
++@Composable
++fun Downloads(navigationGoBack: () -> Unit, packageDetailsViewModel: PackageDetailsViewModel) {
++    val queue = packageDetailsViewModel.downloadManager.queueState.collectAsStateWithLifecycle().value
++    val isDownloaderRunning = packageDetailsViewModel.downloadManager.isDownloaderRunning.collectAsStateWithLifecycle().value
++
++    Scaffold(
++        topBar = {
++            Row(
++                verticalAlignment = Alignment.CenterVertically,
++                horizontalArrangement = Arrangement.spacedBy(4.dp),
++                modifier = Modifier
++                    .statusBarsPadding()
++                    .padding(vertical = 8.dp, horizontal = 4.dp),
++            ) {
++                NPSIconButton(tooltip = "Go Back", onClick = { navigationGoBack() }) {
++                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back" )
++                }
++                Row(
++                    verticalAlignment = Alignment.CenterVertically,
++                    horizontalArrangement = Arrangement.spacedBy(8.dp)
++                ) {
++                    Text(text = "Downloads", style = Typography.titleLarge)
++                    if (queue.isNotEmpty()) {
++                        Badge(containerColor = MaterialTheme.colorScheme.outlineVariant) {
++                            Text(
++                                text = queue.size.toString(),
++                                style = Typography.titleSmall,
++                            )
++                        }
++                    }
++                }
++            }
++        },
++        floatingActionButton = {
++            if (queue.isNotEmpty() && isDownloaderRunning && !packageDetailsViewModel.downloadManager.isDownloaderPaused) {
++                ExtendedFloatingActionButton(
++                    text = { Text(text = "Pause All") },
++                    icon = { Icon(imageVector = Icons.Filled.Pause, contentDescription = "Pause")},
++                    onClick = {
++                        packageDetailsViewModel.downloadManager.pauseDownloads()
++                    }
++                )
++            } else if (queue.isNotEmpty()) {
++               ExtendedFloatingActionButton(
++                    text = { Text(text = "Resume") },
++                    icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Resume")},
++                    onClick = {
++                        packageDetailsViewModel.downloadManager.startDownloads()
++                    }
++                )
++            }
++        }
++    ) { padding ->
++        Column(
++            modifier = Modifier
++                .padding(padding)
++                .background(MaterialTheme.colorScheme.surface),
++        ) {
++            LazyColumn(Modifier.background(MaterialTheme.colorScheme.surface)) {
++                itemsIndexed(
++                    queue,
++                    key = { _, item -> item.url },
++                ) { i, item ->
++                    DownloadItem(
++                        item,
++                        packageDetailsViewModel,
++                        packageDetailsViewModel::removeDownload,
++                        packageDetailsViewModel::pauseDownload,
++                        packageDetailsViewModel::resumeDownload
++                    )
++                }
++            }
++        }
++    }
++}
++
++@Composable
++fun DownloadItem(
++    item: NPSPackageDownload,
++    packageDetailsViewModel: PackageDetailsViewModel,
++    removeDownload: (String) -> Unit,
++    pauseDownload: (String) -> Unit,
++    resumeDownload: (String) -> Unit,
++) {
++    val progress = item.progressFlow.collectAsStateWithLifecycle().value
++    val bytesDownloaded = item.bytesDownloadedFlow.collectAsStateWithLifecycle().value
++    val isDownloaderRunning = packageDetailsViewModel.downloadManager.isDownloaderRunning.collectAsStateWithLifecycle().value
++
++    Row(
++        horizontalArrangement = Arrangement.spacedBy(16.dp),
++        verticalAlignment = Alignment.CenterVertically,
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = 16.dp, vertical = 8.dp)
++    ) {
++        Row(
++            modifier = Modifier
++                .clip(shape = RoundedCornerShape(12.dp))
++                .clickable {
++//                    Log.d("DOWNLOAD", item.status.toString())
++                    if (item.status == NPSPackageDownload.State.DOWNLOADING || item.status == NPSPackageDownload.State.QUEUE) {
++//                        Log.d("DOWNLOAD", "Pausing download")
++                        pauseDownload(item.url)
++                    } else {
++//                        Log.d("DOWNLOAD", "Resuming download")
++//                        if (!isDownloaderRunning) {
++//                            packageDetailsViewModel.downloadManager.startDownloads()
++//                        }
++                        resumeDownload(item.url)
++                    }
++                }
++                .size(48.dp)
++                .aspectRatio(1f)
++                .semantics {
++                    role = Role.Button
++                },
++            verticalAlignment = Alignment.CenterVertically,
++            horizontalArrangement = Arrangement.Center
++        ) {
++            Icon(
++                imageVector = when (item.status) {
++                    NPSPackageDownload.State.DOWNLOADING, NPSPackageDownload.State.QUEUE -> Icons.Filled.Pause
++                    NPSPackageDownload.State.ERROR -> Icons.Filled.RestartAlt
++                    else -> Icons.Filled.PlayArrow
++                },
++                contentDescription = when (item.status) {
++                    NPSPackageDownload.State.DOWNLOADING, NPSPackageDownload.State.QUEUE -> "Pause"
++                    NPSPackageDownload.State.ERROR -> "Retry"
++                    else -> "Resume"
++                },
++                modifier = Modifier.size(32.dp)
++            )
++        }
++        Column(
++            modifier = Modifier
++                .padding(end = 4.dp)
++                .weight(1f),
++            verticalArrangement = Arrangement.spacedBy(12.dp),
++        ) {
++            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
++                Text(
++                    text = item.name,
++                    style = Typography.titleMedium,
++                    maxLines = 1,
++                    overflow = TextOverflow.Ellipsis
++                )
++                Text(text = "${bytesDownloaded.prettyByte()} / ${item.size.prettyByte()}", style = Typography.bodySmall, color = MaterialTheme.colorScheme.outline)
++            }
++            when (item.status) {
++                NPSPackageDownload.State.DOWNLOADING -> {
++                    LinearProgressIndicator(
++                        progress = { progress },
++                        modifier = Modifier.height(2.dp),
++                        strokeCap = StrokeCap.Round,
++                    )
++                }
++                NPSPackageDownload.State.QUEUE -> {
++                    Text("Pending", style = Typography.bodySmall, color = MaterialTheme.colorScheme.outline)
++                }
++                NPSPackageDownload.State.ERROR -> {
++                    Text("Failed", style = Typography.bodySmall, color = MaterialTheme.colorScheme.error)
++                }
++                else -> {
++                    Text("Paused", style = Typography.bodySmall, color = MaterialTheme.colorScheme.outline)
++                }
++            }
++        }
++        Row(
++            modifier = Modifier
++                .clip(shape = RoundedCornerShape(12.dp))
++                .clickable { removeDownload(item.url) }
++                .size(48.dp)
++                .aspectRatio(1f)
++                .semantics {
++                    role = Role.Button
++                },
++            verticalAlignment = Alignment.CenterVertically,
++            horizontalArrangement = Arrangement.Center
++        ) {
++            Icon(
++                imageVector = Icons.Filled.Clear,
++                contentDescription = "Remove",
++            )
++        }
++    }
++}
++
++@Composable
++@Preview
++fun DownloadPreview() {
++    val packageDetailsViewModel: PackageDetailsViewModel = viewModel(
++        factory = PackageDetailsViewModel.Factory
++    )
++
++    Downloads({}, packageDetailsViewModel)
++}
++
++@Composable
++@Preview(showBackground = true)
++fun DownloadItemPreview() {
++    DownloadItem(
++        item = NPSPackageDownload(
++            name = "Test",
++            url = "https://google.com",
++            size = 385273850L,
++            createdAt = 0L,
++            sha256 = "",
++            titleId = "BRUH00001",
++            bytesDownloaded = 0L
++        ),
++        packageDetailsViewModel = viewModel(
++            factory = PackageDetailsViewModel.Factory
++        ),
++        removeDownload = {},
++        pauseDownload = {},
++        resumeDownload = {},
++    )
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Onboarding.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Onboarding.kt
+index 7981f03..7f9d112 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Onboarding.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Onboarding.kt
+@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.statusBarsPadding
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.material3.ButtonDefaults
+@@ -62,6 +63,7 @@ import androidx.compose.foundation.pager.rememberPagerState
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Check
+ import androidx.compose.material.icons.filled.CheckCircle
+ import androidx.compose.material3.Button
+ import androidx.compose.material3.FilledTonalButton
+@@ -111,11 +113,13 @@ fun OnBoarding(
+         factory = SettingsViewModel.Factory
+     ),
+ ) {
+-    val systemUiController = rememberSystemUiController()
++//    val systemUiController = rememberSystemUiController()
+     val pagerState = rememberPagerState(
+         initialPage = 0,
+         initialPageOffsetFraction = 0f
+-    )
++    ) {
++        PAGE_COUNT
++    }
+     val scope = rememberCoroutineScope()
+     val context = LocalContext.current
+     val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
+@@ -125,23 +129,23 @@ fun OnBoarding(
+         else -> true
+     }
+ 
+-    DisposableEffect(systemUiController) {
+-        systemUiController.setStatusBarColor(
+-            color = Color.Transparent,
+-            darkIcons = darkIcons && !darkTheme
+-        )
++    DisposableEffect(Unit) {
++//        systemUiController.setStatusBarColor(
++//            color = Color.Transparent,
++//            darkIcons = darkIcons && !darkTheme
++//        )
+         val activity = context as Activity
+         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+         onDispose {
+-            systemUiController.setStatusBarColor(
+-                color = Color.Transparent,
+-                darkIcons = !darkTheme
+-            )
++//            systemUiController.setStatusBarColor(
++//                color = Color.Transparent,
++//                darkIcons = !darkTheme
++//            )
+             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+         }
+     }
+ 
+-    HorizontalPager(pageCount = PAGE_COUNT, state = pagerState) { page ->
++    HorizontalPager(state = pagerState) { page ->
+         when (page) {
+             0 -> OnBoardingInitial(
+                 incrementPage = {
+@@ -782,7 +786,19 @@ fun Toggleable(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Un
+             horizontalArrangement = Arrangement.SpaceBetween,
+         ) {
+             Text(text = title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1.0f))
+-            Switch(checked = checked, onCheckedChange = null)
++            Switch(
++                checked = checked,
++                onCheckedChange = null,
++                thumbContent = if (checked) {
++                    {
++                        Icon(
++                            imageVector = Icons.Default.Check,
++                            contentDescription = null,
++                            modifier = Modifier.size(16.dp)
++                        )
++                    }
++                } else null
++            )
+         }
+     }
+ }
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/PackageDetails.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/PackageDetails.kt
+index 7cd74fb..b86219b 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/PackageDetails.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/PackageDetails.kt
+@@ -1,5 +1,7 @@
+ package com.illusionware.npsbrowser.ui.screens
+ 
++import android.annotation.SuppressLint
++import android.content.ClipData
+ import android.net.Uri
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.result.contract.ActivityResultContracts
+@@ -20,7 +22,7 @@ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.statusBarsPadding
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.Download
+ import androidx.compose.material.icons.filled.DownloadDone
+ import androidx.compose.material.icons.filled.Public
+@@ -50,13 +52,14 @@ import androidx.compose.ui.graphics.painter.ColorPainter
+ import androidx.compose.ui.graphics.painter.Painter
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.ClipEntry
++import androidx.compose.ui.platform.LocalClipboard
+ import androidx.compose.ui.platform.LocalClipboardManager
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.text.AnnotatedString
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+-import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+@@ -65,9 +68,8 @@ import coil.compose.AsyncImage
+ import coil.request.ImageRequest
+ import com.illusionware.npsbrowser.R
+ import com.illusionware.npsbrowser.PlaceholderColor
+-import com.illusionware.npsbrowser.data.ItemLayout
+ import com.illusionware.npsbrowser.data.SettingsPreferences
+-import com.illusionware.npsbrowser.data.Theme
++import com.illusionware.npsbrowser.data.download.NPSPackageDownload
+ import com.illusionware.npsbrowser.ui.components.NPSAlertDialog
+ import com.illusionware.npsbrowser.ui.components.NPSFloatingActionButton
+ import com.illusionware.npsbrowser.ui.components.NPSIconButton
+@@ -77,6 +79,7 @@ import com.illusionware.npsbrowser.viewmodels.PackageDetailsViewModel
+ import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
+ import kotlinx.coroutines.launch
+ 
++@SuppressLint("MissingPermission")
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+ fun PackageDetails(
+@@ -86,7 +89,8 @@ fun PackageDetails(
+     ),
+     packageDetailsViewModel: PackageDetailsViewModel,
+ ) {
+-    val clipboard = LocalClipboardManager.current
++    val clipboard = LocalClipboard.current
++//    val context = LocalContext.current
+     val sheetState = rememberModalBottomSheetState(
+         skipPartiallyExpanded = true
+     )
+@@ -107,7 +111,7 @@ fun PackageDetails(
+                     .padding(vertical = 8.dp, horizontal = 4.dp),
+             ) {
+                 NPSIconButton(tooltip = "Go Back", onClick = navigationGoBack) {
+-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Go Back" )
++                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back" )
+                 }
+             }
+         },
+@@ -116,9 +120,13 @@ fun PackageDetails(
+                 NPSFloatingActionButton(
+                     onClick = {
+                         if (!item.zRif.isNullOrEmpty()) {
+-                            clipboard.setText(AnnotatedString(item.zRif))
++                            scope.launch {
++                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(item.zRif, item.zRif)))
++                            }
+                         } else if (!item.rap.isNullOrEmpty()) {
+-                            clipboard.setText(AnnotatedString(item.rap))
++                            scope.launch {
++                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(item.rap, item.rap)))
++                            }
+                         }
+                         scope.launch {
+                             snackbarHostState.showSnackbar("License key copied to clipboard")
+@@ -132,7 +140,61 @@ fun PackageDetails(
+                     )
+                 }
+                 NPSFloatingActionButton(
+-                    onClick = { /* TODO: */ },
++                    onClick = {
++//                        val downloadNotif = NotificationCompat.Builder(context, Notifications.CHANNEL_DOWNLOADER)
++//                            .setSmallIcon(android.R.drawable.stat_sys_download)
++//                            .setContentTitle("Downloading ${item.name}")
++//                            .setTicker("Downloading ${item.name}")
++//                            .setContentText("0MB / ${item.pkgSize}")
++//                            .setColor(ColorAccent.toArgb())
++//                            .setOngoing(true)
++//                            .setGroup(Notifications.GROUP_DOWNLOADER)
++//                            .setProgress(100, 0, false)
++//
++//                        val groupNotif = NotificationCompat.Builder(context, Notifications.CHANNEL_DOWNLOADER)
++//                            .setSmallIcon(android.R.drawable.stat_sys_download)
++//                            .setContentTitle("Downloading packages")
++//                            .setTicker("Downloading packages")
++//                            .setColor(ColorAccent.toArgb())
++//                            .setOngoing(true)
++//                            .setGroup(Notifications.GROUP_DOWNLOADER)
++//                            .setGroupSummary(true)
++//                            .setProgress(100, 0, false)
++//                            .build()
++//
++//                        val id = Random(System.currentTimeMillis()).nextInt(1000)
++//
++//                        NotificationManagerCompat
++//                            .from(context)
++//                            .notify(id, downloadNotif.build())
++//
++//                        NotificationManagerCompat
++//                            .from(context)
++//                            .notify(Notifications.ID_DOWNLOADER_GROUP, groupNotif)
++
++//                            DownloadNotifier(context).notify()
++                        packageDetailsViewModel.downloadManager.download(
++                            NPSPackageDownload(
++                                item.pkgUrl!!,
++                                item.titleId,
++                                item.name,
++                                item.sha256,
++                                item.pkgSizeInBytes?.toLong() ?: 0,
++                                0L,
++                                System.currentTimeMillis()
++                        ))
++//                        packageDetailsViewModel.downloadManager.startDownloads()
++//                        packageDetailsViewModel.downloader.enqueue(NPSPackageDownload(
++//                            item.pkgUrl!!,
++//                            item.titleId,
++//                            item.name,
++//                            item.sha256,
++//                            item.pkgSizeInBytes?.toLong() ?: 0,
++//                            System.currentTimeMillis()
++//                        ), true)
++//                        packageDetailsViewModel.downloader.start()
++//                        downloader.download(id, item)
++                    },
+                     onLongClick = { showBottomSheet = true },
+                     enabled = !item.pkgUrl.isNullOrEmpty()
+                 ) {
+@@ -209,6 +271,7 @@ fun PackageDetails(
+             },
+             sheetState = sheetState,
+             prefs = prefs,
++            packageDetailsViewModel = packageDetailsViewModel
+         )
+     }
+ }
+@@ -218,14 +281,15 @@ fun PackageDetails(
+ fun OneTimeConfigBottomSheet(
+     sheetState: SheetState,
+     onDismiss: () -> Unit,
+-    prefs: SettingsPreferences
++    prefs: SettingsPreferences,
++    packageDetailsViewModel: PackageDetailsViewModel
+ ) {
+     ModalBottomSheet(
+         onDismissRequest = onDismiss,
+         sheetState = sheetState,
+-        windowInsets = WindowInsets(top = 0.dp),
++        //windowInsets = WindowInsets(top = 0.dp),
+     ) {
+-        OneTimeConfigSheetContent(prefs)
++        OneTimeConfigSheetContent(prefs, packageDetailsViewModel)
+     }
+ }
+ 
+@@ -290,9 +354,11 @@ fun Option(
+     }
+ }
+ 
+-@OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+-fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
++fun OneTimeConfigSheetContent(
++    prefs: SettingsPreferences,
++    packageDetailsViewModel: PackageDetailsViewModel
++) {
+     var autoDecrypt by remember { mutableStateOf(prefs.pkg2zipAutoDecrypt) }
+     var unpackInPlace by remember { mutableStateOf(prefs.unpackInDownload) }
+     var deleteAfter by remember { mutableStateOf(prefs.deleteAfterUnpack) }
+@@ -318,6 +384,8 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
+         }
+     }
+ 
++    val item = packageDetailsViewModel.uiState.collectAsStateWithLifecycle().value.item!!
++
+     Column(
+         verticalArrangement = Arrangement.spacedBy(16.dp),
+         horizontalAlignment = Alignment.CenterHorizontally,
+@@ -385,7 +453,21 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
+                 }
+             }
+             Button(
+-                onClick = { /*TODO: do the download*/ },
++                onClick = {
++                    // TODO: need a function to download with custom params
++                    // TODO: also close the bottom sheet
++                    packageDetailsViewModel.downloadManager.download(
++                        NPSPackageDownload(
++                            item.pkgUrl!!,
++                            item.titleId,
++                            item.name,
++                            item.sha256,
++                            item.pkgSizeInBytes?.toLong() ?: 0,
++                            0L,
++                            System.currentTimeMillis()
++                        )
++                    )
++                },
+                 modifier = Modifier.padding(horizontal = 24.dp),
+             ) {
+                 Icon(
+@@ -425,31 +507,3 @@ fun OneTimeConfigSheetContent(prefs: SettingsPreferences) {
+         }
+     }
+ }
+-
+-@Composable
+-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+-fun BottomSheetPreview() {
+-    val prefs = SettingsPreferences(
+-        Theme.SYSTEM.ordinal,
+-        ItemLayout.LIST.ordinal,
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        "",
+-        false,
+-        false,
+-        "",
+-        true,
+-    )
+-
+-    Column {
+-        OneTimeConfigSheetContent(prefs = prefs)
+-    }
+-}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Settings.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Settings.kt
+index 16231e4..67ff888 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Settings.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/screens/Settings.kt
+@@ -23,9 +23,8 @@ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.filled.ArrowBack
++import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.Check
+-import androidx.compose.material.icons.outlined.ArrowDropDown
+ import androidx.compose.material.icons.outlined.ExpandMore
+ import androidx.compose.material.icons.outlined.FileDownload
+ import androidx.compose.material.icons.outlined.Palette
+@@ -46,7 +45,6 @@ import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.alpha
+-import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.painter.Painter
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.platform.LocalContext
+@@ -70,6 +68,7 @@ import com.illusionware.npsbrowser.data.Theme
+ import com.illusionware.npsbrowser.model.ConsoleType
+ import com.illusionware.npsbrowser.model.PackageItemType
+ 
++// TODO: localize this
+ private val Themes = hashMapOf(
+     Theme.LIGHT.ordinal to "Light",
+     Theme.DARK.ordinal to "Dark",
+@@ -96,7 +95,7 @@ fun SettingsScreen(
+                     .padding(vertical = 8.dp, horizontal = 4.dp),
+             ) {
+                 NPSIconButton(tooltip = "Go Back", onClick = { navigationGoBack() }) {
+-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Go Back" )
++                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back" )
+                 }
+                 Text(text = stringResource(id = R.string.title_activity_settings), style = Typography.titleLarge)
+             }
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Color.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Color.kt
+index 1da629b..027834f 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Color.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Color.kt
+@@ -19,6 +19,7 @@ val ColorOnSecondaryDark = Color(0xDFFFFFFF)
+ val ColorAmoledDark = Color(0xFF000000)
+ 
+ // Works on both Dark and Light
++val ColorTag = Color(0xFFEAF654)
+ val ColorAccent = Color(0xFF545FBF)
+ val ColorError = Color(0xFFF93422)
+ 
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Theme.kt b/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Theme.kt
+index 8ee2337..6f508fe 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Theme.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/ui/theme/Theme.kt
+@@ -2,6 +2,8 @@ package com.illusionware.npsbrowser.ui.theme
+ 
+ import android.app.Activity
+ import android.os.Build
++import android.view.WindowInsetsController
++import android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+ import androidx.compose.foundation.isSystemInDarkTheme
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.darkColorScheme
+@@ -88,7 +90,6 @@ fun NPSBrowserTheme(
+     dynamicColor: Boolean = true,
+     content: @Composable () -> Unit
+ ) {
+-    val systemUiController = rememberSystemUiController()
+     val colorScheme = when {
+         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+             val context = LocalContext.current
+@@ -102,15 +103,15 @@ fun NPSBrowserTheme(
+     if (!view.isInEditMode) {
+         SideEffect {
+             val window = (view.context as Activity).window
++            // WindowCompat still doesn't have a wrapper for both old and new API versions
++            // so we use the deprecated fields that work for both.
++            // window.insetsController.apply { setSystemBarsAppearance() } is for newer API versions only
+             window.statusBarColor = Color.Transparent.toArgb()
+             window.navigationBarColor = Color.Transparent.toArgb()
+             // allows pages to extend to the status bar
+             WindowCompat.setDecorFitsSystemWindows(window, false)
+-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+-            systemUiController.setSystemBarsColor(
+-                color = Color.Transparent,
+-                darkIcons = !darkTheme
+-            )
++            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
++            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+         }
+     }
+ 
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/DisplayExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/DisplayExtensions.kt
+deleted file mode 100644
+index a4131e0..0000000
+--- a/app/src/main/java/com/illusionware/npsbrowser/util/DisplayExtensions.kt
++++ /dev/null
+@@ -1,10 +0,0 @@
+-package com.illusionware.npsbrowser.util
+-
+-import android.content.Context
+-import android.os.Build
+-
+-// Borrowed from https://github.com/tachiyomiorg/tachiyomi/tree/master
+-fun Context.isNavigationBarNeedsScrim(): Boolean {
+-    return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+-            InternalResourceHelper.getBoolean(this, "config_navBarNeedsScrim", true)
+-}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/ContextExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/ContextExtensions.kt
+new file mode 100644
+index 0000000..11d00a9
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/ContextExtensions.kt
+@@ -0,0 +1,29 @@
++package com.illusionware.npsbrowser.util.system
++
++import android.app.ActivityManager
++import android.content.Context
++import android.os.PowerManager
++import android.widget.Toast
++import androidx.core.content.getSystemService
++
++fun Context.isServiceRunning(serviceClass: Class<*>): Boolean {
++    val className = serviceClass.name
++    val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
++    return manager.getRunningServices(Integer.MAX_VALUE).any { className == it.service.className }
++}
++
++val Context.powerManager: PowerManager
++    get() = getSystemService()!!
++
++fun Context.acquireWakeLock(tag: String): PowerManager.WakeLock {
++    val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$tag:WakeLock")
++    wakeLock.acquire()
++    return wakeLock
++}
++
++fun Context.toast(text: String?, duration: Int = Toast.LENGTH_SHORT, block: (Toast) -> Unit = {}): Toast {
++    return Toast.makeText(applicationContext, text.orEmpty(), duration).also {
++        block(it)
++        it.show()
++    }
++}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/CoroutinesExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/CoroutinesExtensions.kt
+new file mode 100644
+index 0000000..0ed7358
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/CoroutinesExtensions.kt
+@@ -0,0 +1,7 @@
++package com.illusionware.npsbrowser.util.system
++
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
++
++suspend fun <T> withUIContext(block: suspend CoroutineScope.() -> T) = withContext(Dispatchers.Main, block)
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/DisplayExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/DisplayExtensions.kt
+new file mode 100644
+index 0000000..c32133c
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/DisplayExtensions.kt
+@@ -0,0 +1,32 @@
++package com.illusionware.npsbrowser.util.system
++
++import android.content.Context
++import android.os.Build
++import java.util.Locale.ENGLISH
++
++// Borrowed from https://github.com/tachiyomiorg/tachiyomi/tree/master
++fun Context.isNavigationBarNeedsScrim(): Boolean {
++    return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
++            InternalResourceHelper.getBoolean(this, "config_navBarNeedsScrim", true)
++}
++
++fun Long.prettyByte(): String {
++    val kilobyte: Long = 1024
++    val megabyte = kilobyte * 1024
++    val gigabyte = megabyte * 1024
++    val terabyte = gigabyte * 1024
++
++    return if (this in 0 until kilobyte) {
++        "$this" + "B"
++    } else if (this in kilobyte until megabyte) {
++        String.format(ENGLISH, "%.2f", (this.toDouble() / kilobyte.toDouble())) + "KB"
++    } else if (this in megabyte until gigabyte) {
++        String.format(ENGLISH, "%.2f", (this.toDouble() / megabyte.toDouble())) + "MB"
++    } else if (this in gigabyte until terabyte) {
++        String.format(ENGLISH, "%.2f", (this.toDouble() / gigabyte.toDouble())) + "GB"
++    } else if (this >= terabyte) {
++        String.format(ENGLISH, "%.2f", (this.toDouble() / terabyte.toDouble())) + "TB"
++    } else {
++        "$this" + "B"
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/InternalResourceHelper.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/InternalResourceHelper.kt
+similarity index 94%
+rename from app/src/main/java/com/illusionware/npsbrowser/util/InternalResourceHelper.kt
+rename to app/src/main/java/com/illusionware/npsbrowser/util/system/InternalResourceHelper.kt
+index 96add7d..efd9c8b 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/util/InternalResourceHelper.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/InternalResourceHelper.kt
+@@ -1,4 +1,4 @@
+-package com.illusionware.npsbrowser.util
++package com.illusionware.npsbrowser.util.system
+ 
+ import android.annotation.SuppressLint
+ import android.content.Context
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/NetworkExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/NetworkExtensions.kt
+new file mode 100644
+index 0000000..c3f5cd5
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/NetworkExtensions.kt
+@@ -0,0 +1,40 @@
++package com.illusionware.npsbrowser.util.system
++
++import android.content.Context
++import android.net.ConnectivityManager
++import android.net.NetworkCapabilities
++import android.net.wifi.WifiManager
++import android.os.Build
++import androidx.core.content.getSystemService
++
++val Context.connectivityManager: ConnectivityManager
++    get() = getSystemService()!!
++
++val Context.wifiManager: WifiManager
++    get() = getSystemService()!!
++
++fun Context.isOnline(): Boolean {
++    val activeNetwork = connectivityManager.activeNetwork ?: return false
++    val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
++    val maxTransport = when {
++        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1 -> NetworkCapabilities.TRANSPORT_LOWPAN
++        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> NetworkCapabilities.TRANSPORT_WIFI_AWARE
++        else -> NetworkCapabilities.TRANSPORT_VPN
++    }
++    return (NetworkCapabilities.TRANSPORT_CELLULAR..maxTransport).any(networkCapabilities::hasTransport)
++}
++
++fun Context.isConnectedToWifi(): Boolean {
++    if (!wifiManager.isWifiEnabled) return false
++
++    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++        val activeNetwork = connectivityManager.activeNetwork ?: return false
++        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
++
++        networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
++                networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
++    } else {
++        @Suppress("DEPRECATION")
++        wifiManager.connectionInfo.bssid != null
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/NotificationExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/NotificationExtensions.kt
+new file mode 100644
+index 0000000..a863476
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/NotificationExtensions.kt
+@@ -0,0 +1,60 @@
++package com.illusionware.npsbrowser.util.system
++
++import android.Manifest
++import android.app.Notification
++import android.app.NotificationManager
++import android.content.Context
++import android.os.Build
++import androidx.compose.ui.graphics.toArgb
++import androidx.core.app.NotificationChannelCompat
++import androidx.core.app.NotificationChannelGroupCompat
++import androidx.core.app.NotificationCompat
++import androidx.core.app.NotificationManagerCompat
++import androidx.core.app.NotificationManagerCompat.NotificationWithIdAndTag
++import androidx.core.content.PermissionChecker
++import androidx.core.content.getSystemService
++import com.illusionware.npsbrowser.ui.theme.ColorAccent
++
++val Context.notificationManager: NotificationManager
++    get() = getSystemService()!!
++
++fun Context.notify(id: Int, channelId: String, block: (NotificationCompat.Builder.() -> Unit)? = null) {
++    val notification = notificationBuilder(channelId, block).build()
++    this.notify(id, notification)
++}
++
++fun Context.notify(id: Int, notification: Notification) {
++    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && PermissionChecker.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PermissionChecker.PERMISSION_GRANTED) {
++        return
++    }
++
++    NotificationManagerCompat.from(this).notify(id, notification)
++}
++
++fun Context.notify(notificationWithIdAndTags: List<NotificationWithIdAndTag>) {
++    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && PermissionChecker.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PermissionChecker.PERMISSION_GRANTED) {
++        return
++    }
++
++    NotificationManagerCompat.from(this).notify(notificationWithIdAndTags)
++}
++
++fun Context.cancelNotification(id: Int) {
++    NotificationManagerCompat.from(this).cancel(id)
++}
++
++/**
++ * Helper method to create a notification builder.
++ *
++ * @param channelId the channel id.
++ * @param block the function that will execute inside the builder.
++ * @return a notification to be displayed or updated.
++ */
++fun Context.notificationBuilder(channelId: String, block: (NotificationCompat.Builder.() -> Unit)? = null): NotificationCompat.Builder {
++    val builder = NotificationCompat.Builder(this, channelId)
++        .setColor(ColorAccent.toArgb())
++    if (block != null) {
++        builder.block()
++    }
++    return builder
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/util/system/OkioExtensions.kt b/app/src/main/java/com/illusionware/npsbrowser/util/system/OkioExtensions.kt
+new file mode 100644
+index 0000000..172eae0
+--- /dev/null
++++ b/app/src/main/java/com/illusionware/npsbrowser/util/system/OkioExtensions.kt
+@@ -0,0 +1,77 @@
++package com.illusionware.npsbrowser.util.system
++
++import android.util.Log
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.isActive
++import okio.BufferedSink
++import okio.BufferedSource
++import okio.buffer
++import okio.sink
++import java.io.File
++import java.io.OutputStream
++
++/**
++ * Saves the given source to a file and closes it. Directories will be created if needed.
++ *
++ * @param file the file where the source is copied.
++ */
++//fun BufferedSource.saveTo(file: File) {
++//    try {
++//        // Create parent dirs if needed
++//        file.parentFile?.mkdirs()
++//
++//        // Copy to destination
++//        saveTo(file.outputStream())
++//    } catch (e: Exception) {
++//        close()
++//        file.delete()
++//        throw e
++//    }
++//}
++
++fun BufferedSource.saveTo(sink: BufferedSink, totalBytes: Long, bytesRead: Long, scope: CoroutineScope): Boolean {
++    val alreadyDownloadedBytes = bytesRead
++    var bytesRead = bytesRead
++    var finishedDownloading = false
++
++    use { input ->
++        try {
++            var noOfBytes = input.read(sink.buffer, DEFAULT_BUFFER_SIZE.toLong())
++            while (noOfBytes != -1L && scope.isActive) {
++                bytesRead += noOfBytes
++//                publishUpdates(channel, bytesRead, totalBytes, DOWNLOADING, uri)
++                noOfBytes = input.read(sink.buffer, DEFAULT_BUFFER_SIZE.toLong())
++            }
++
++            if (bytesRead != totalBytes + alreadyDownloadedBytes) {
++                bytesRead = input.read(sink.buffer, totalBytes - bytesRead)
++            } else {
++                finishedDownloading = true
++            }
++//            publishUpdates(channel, bytesRead, totalBytes, COMPLETED, uri)
++        } catch (e: Exception) {
++            Log.d("DOWNLOAD", "WE HIT AN EXCEPTION: $e")
++        } finally {
++            sink.close()
++            input.close()
++        }
++    }
++
++    return finishedDownloading
++}
++
++/**
++ * Saves the given source to an output stream and closes both resources.
++ *
++ * @param stream the stream where the source is copied.
++ */
++//fun BufferedSource.saveTo(stream: OutputStream, scope: CoroutineScope) {
++//    use { input ->
++//        stream.sink().buffer().use {
++//            if (scope.isActive) {
++//                it.writeAll(input)
++//                it.flush()
++//            }
++//        }
++//    }
++//}
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/OnboardingViewModel.kt b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/OnboardingViewModel.kt
+index 468d20c..56703f6 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/OnboardingViewModel.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/OnboardingViewModel.kt
+@@ -13,6 +13,7 @@ import com.illusionware.npsbrowser.data.OnboardingPreferencesRepository
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.flow.stateIn
+ import kotlinx.coroutines.launch
+ import java.io.File
+@@ -29,6 +30,10 @@ class OnboardingViewModel(
+             )
+         )
+ 
++    suspend fun getOnboardingStatus(): Boolean {
++        return onboardingPreferencesRepository.getPreferences().first().seenOnboarding
++    }
++
+     fun finishOnboarding(shouldCreateDefaultDir: Boolean) {
+         viewModelScope.launch(Dispatchers.IO) {
+             if (shouldCreateDefaultDir) {
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageDetailsViewModel.kt b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageDetailsViewModel.kt
+index 1746b68..68d799d 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageDetailsViewModel.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageDetailsViewModel.kt
+@@ -1,6 +1,12 @@
+ package com.illusionware.npsbrowser.viewmodels
+ 
+ import androidx.lifecycle.ViewModel
++import androidx.lifecycle.ViewModelProvider
++import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
++import androidx.lifecycle.viewmodel.initializer
++import androidx.lifecycle.viewmodel.viewModelFactory
++import com.illusionware.npsbrowser.NPSApp
++import com.illusionware.npsbrowser.data.download.DownloadManager
+ import com.illusionware.npsbrowser.model.PackageItem
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+@@ -10,11 +16,24 @@ data class SelectedPackageUiState(
+     val item: PackageItem?,
+ )
+ 
+-class PackageDetailsViewModel: ViewModel() {
++class PackageDetailsViewModel(val downloadManager: DownloadManager): ViewModel() {
+     private val _uiState = MutableStateFlow(SelectedPackageUiState(null))
+     val uiState: StateFlow<SelectedPackageUiState> = _uiState.asStateFlow()
+ 
+     fun setSelectedPackage(item: PackageItem) {
+         _uiState.value = SelectedPackageUiState(item)
+     }
++
++    fun removeDownload(url: String) = downloadManager.cancelDownload(url)
++    fun pauseDownload(url: String) = downloadManager.pauseDownload(url)
++    fun resumeDownload(url: String) = downloadManager.resumeDownload(url)
++
++    companion object {
++        val Factory: ViewModelProvider.Factory = viewModelFactory {
++            initializer {
++                val application = (this[APPLICATION_KEY] as NPSApp)
++                PackageDetailsViewModel(application.downloadManager)
++            }
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageListData.kt b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageListData.kt
+index bf49359..5709ba3 100644
+--- a/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageListData.kt
++++ b/app/src/main/java/com/illusionware/npsbrowser/viewmodels/PackageListData.kt
+@@ -15,6 +15,7 @@ import com.illusionware.npsbrowser.data.SettingsPreferencesRepository
+ import com.illusionware.npsbrowser.model.ConsoleType
+ import com.illusionware.npsbrowser.model.PackageItem
+ import com.illusionware.npsbrowser.model.PackageItemType
++import com.illusionware.npsbrowser.util.system.prettyByte
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
+ import okhttp3.internal.toLongOrDefault
+ import java.io.InputStream
++import androidx.core.net.toUri
++import java.util.Locale.ENGLISH
+ 
+ data class PackageListUiState(
+     val packages: ArrayList<PackageItem> = ArrayList(),
+@@ -125,7 +128,7 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
+ 
+         val file: InputStream?
+         try {
+-            file = app.contentResolver.openInputStream(Uri.parse(fileUri))
++            file = app.contentResolver.openInputStream(fileUri.toUri())
+         } catch (e: Exception) {
+             throw e
+         }
+@@ -153,10 +156,10 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
+             val tempsha256 = row["SHA256"]
+             val tempDate = row["Last Modification Date"]
+             if (!tempSize.isNullOrEmpty()) {
+-                size = bytesIntoHumanReadable(tempSize.toLongOrDefault(0))
++                size = tempSize.toLongOrDefault(0).prettyByte()
+             }
+             if (!tempFW.isNullOrEmpty()) {
+-                minFW = String.format("%.2f", tempFW.toFloat())
++                minFW = String.format(ENGLISH, "%.2f", tempFW.toFloat())
+             }
+             if (!tempUrl.isNullOrEmpty() && tempUrl != "MISSING") {
+                 pkgUrl = tempUrl
+@@ -186,6 +189,7 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
+                     contentId,
+                     modificationDate,
+                     size,
++                    tempSize?.toULongOrNull(),
+                     sha256,
+                     zRif,
+                     rap,
+@@ -201,27 +205,6 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
+         return list
+     }
+ 
+-    private fun bytesIntoHumanReadable(bytes: Long): String {
+-        val kilobyte: Long = 1024
+-        val megabyte = kilobyte * 1024
+-        val gigabyte = megabyte * 1024
+-        val terabyte = gigabyte * 1024
+-
+-        return if (bytes in 0 until kilobyte) {
+-            "$bytes" + "B"
+-        } else if (bytes in kilobyte until megabyte) {
+-            String.format("%.2f", (bytes.toDouble() / kilobyte.toDouble())) + "KB"
+-        } else if (bytes in megabyte until gigabyte) {
+-            String.format("%.2f", (bytes.toDouble() / megabyte.toDouble())) + "MB"
+-        } else if (bytes in gigabyte until terabyte) {
+-            String.format("%.2f", (bytes.toDouble() / gigabyte.toDouble())) + "GB"
+-        } else if (bytes >= terabyte) {
+-            String.format("%.2f", (bytes.toDouble() / terabyte.toDouble())) + "TB"
+-        } else {
+-            "$bytes" + "B"
+-        }
+-    }
+-
+     companion object {
+         val Factory: ViewModelProvider.Factory = viewModelFactory {
+             initializer {
+diff --git a/app/src/main/res/drawable/baseline_cloud_download_24.xml b/app/src/main/res/drawable/baseline_cloud_download_24.xml
+new file mode 100644
+index 0000000..1572e34
+--- /dev/null
++++ b/app/src/main/res/drawable/baseline_cloud_download_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96zM17,13l-5,5 -5,-5h3V9h4v4h3z"/>
++</vector>
+diff --git a/app/src/main/res/layout/single_app_fragment.xml b/app/src/main/res/layout/single_app_fragment.xml
+deleted file mode 100644
+index c348cc5..0000000
+--- a/app/src/main/res/layout/single_app_fragment.xml
++++ /dev/null
+@@ -1,213 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+-    xmlns:app="http://schemas.android.com/apk/res-auto"
+-    xmlns:tools="http://schemas.android.com/tools"
+-    android:id="@+id/linear"
+-    android:layout_width="match_parent"
+-    android:layout_height="match_parent">
+-
+-    <TextView
+-        android:id="@+id/singleAppError"
+-        android:layout_width="match_parent"
+-        android:layout_height="60dp"
+-        android:fontFamily="sans-serif-light"
+-        android:gravity="center"
+-        android:textAlignment="center"
+-        android:textColor="@color/colorError"
+-        android:textSize="24sp"
+-        android:textStyle="bold"
+-        app:layout_constraintBottom_toBottomOf="parent"
+-        app:layout_constraintEnd_toEndOf="parent"
+-        app:layout_constraintStart_toStartOf="parent"
+-        tools:text="error" />
+-
+-    <ScrollView
+-        android:id="@+id/scrollView2"
+-        android:layout_width="0dp"
+-        android:layout_height="0dp"
+-        android:fillViewport="true"
+-        app:layout_constraintBottom_toTopOf="@+id/singleAppError"
+-        app:layout_constraintEnd_toEndOf="parent"
+-        app:layout_constraintStart_toStartOf="parent"
+-        app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+-
+-        <androidx.constraintlayout.widget.ConstraintLayout
+-            android:layout_width="match_parent"
+-            android:layout_height="wrap_content"
+-            app:layout_constrainedHeight="false"
+-            app:layout_constraintBottom_toBottomOf="parent"
+-            app:layout_constraintEnd_toEndOf="parent"
+-            app:layout_constraintStart_toStartOf="parent"
+-            app:layout_constraintTop_toTopOf="parent">
+-
+-            <TextView
+-                android:id="@+id/singleAppTitle"
+-                android:layout_width="0dp"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="16dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-light"
+-                android:textAlignment="center"
+-                android:textSize="24sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="1.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toTopOf="parent"
+-                tools:text="Game Title" />
+-
+-            <Button
+-                android:id="@+id/singleAppDownloadButton"
+-                android:layout_width="0dp"
+-                android:layout_height="66dp"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="12dp"
+-                android:layout_marginEnd="48dp"
+-                android:text="@string/download"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppTitle" />
+-
+-            <Button
+-                android:id="@+id/singleAppCopyZRIFButton"
+-                android:layout_width="0dp"
+-                android:layout_height="66dp"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="6dp"
+-                android:layout_marginEnd="48dp"
+-                android:text="@string/copy_zrif"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppDownloadButton" />
+-
+-            <TextView
+-                android:id="@+id/singleAppContentIdTitle"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="24dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-black"
+-                android:text="@string/content_id"
+-                android:textAlignment="center"
+-                android:textSize="24sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppCopyZRIFButton" />
+-
+-            <TextView
+-                android:id="@+id/singleAppContentId"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="12dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-light"
+-                android:textAlignment="center"
+-                android:textSize="20sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppContentIdTitle"
+-                tools:text="Content ID" />
+-
+-            <TextView
+-                android:id="@+id/singleAppSizeTitle"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="24dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-black"
+-                android:text="@string/size"
+-                android:textAlignment="center"
+-                android:textSize="24sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppContentId" />
+-
+-            <TextView
+-                android:id="@+id/singleAppFwVerTitle"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="24dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-black"
+-                android:text="@string/minfw"
+-                android:textAlignment="center"
+-                android:textSize="24sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppSize" />
+-
+-            <TextView
+-                android:id="@+id/singleAppSize"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="12dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-light"
+-                android:textAlignment="center"
+-                android:textSize="20sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="0.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppSizeTitle"
+-                tools:text="Size" />
+-
+-            <TextView
+-                android:id="@+id/singleAppFwVer"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_marginStart="48dp"
+-                android:layout_marginTop="12dp"
+-                android:layout_marginEnd="48dp"
+-                android:fontFamily="sans-serif-light"
+-                android:textAlignment="center"
+-                android:textSize="20sp"
+-                android:textStyle="bold"
+-                app:layout_constraintEnd_toEndOf="parent"
+-                app:layout_constraintHorizontal_bias="1.0"
+-                app:layout_constraintStart_toStartOf="parent"
+-                app:layout_constraintTop_toBottomOf="@+id/singleAppFwVerTitle"
+-                tools:text="MinFW" />
+-
+-
+-        </androidx.constraintlayout.widget.ConstraintLayout>
+-    </ScrollView>
+-
+-    <LinearLayout
+-        android:id="@+id/linearLayout"
+-        android:layout_width="410dp"
+-        android:layout_height="250dp"
+-        android:orientation="vertical"
+-        app:layout_constraintEnd_toEndOf="parent"
+-        app:layout_constraintStart_toStartOf="parent"
+-        app:layout_constraintTop_toTopOf="parent">
+-
+-        <ImageView
+-            android:id="@+id/singleAppIcon"
+-            android:layout_width="match_parent"
+-            android:layout_height="match_parent"
+-            android:layout_marginStart="100dp"
+-            android:layout_marginTop="0dp"
+-            android:layout_marginEnd="100dp"
+-            android:contentDescription="@string/single_app_icon"
+-            app:srcCompat="@drawable/ic_games_placeholder_24dp" />
+-
+-    </LinearLayout>
+-
+-</androidx.constraintlayout.widget.ConstraintLayout>
+\ No newline at end of file
+diff --git a/app/src/main/res/values-zh-rCN/strings.xml b/app/src/main/res/values-zh-rCN/strings.xml
+index 10683c4..4360acf 100644
+--- a/app/src/main/res/values-zh-rCN/strings.xml
++++ b/app/src/main/res/values-zh-rCN/strings.xml
+@@ -21,15 +21,9 @@
+ 	<string name="appearance">外观</string>
+ 	<string name="theme">主题</string>
+ 	<string name="layout">布局</string>
+-
+-	<string-array name="app_theme">
+-		<item>明亮</item>
+-		<item>黑暗</item>
+-		<item>使用系统默认</item>
+-	</string-array>
+-
+-	<string-array name="layout_type">
+-		<item>列表</item>
+-		<item>网格</item>
+-	</string-array>
++	<string name="theme_light">明亮</string>
++	<string name="theme_dark">黑暗</string>
++	<string name="theme_system">使用系统默认</string>
++	<string name="layout_list">列表</string>
++	<string name="layout_grid">网格</string>
+ </resources>
+diff --git a/app/src/main/res/values-zh-rTW/strings.xml b/app/src/main/res/values-zh-rTW/strings.xml
+index 964b6ae..7bf95b9 100644
+--- a/app/src/main/res/values-zh-rTW/strings.xml
++++ b/app/src/main/res/values-zh-rTW/strings.xml
+@@ -21,15 +21,9 @@
+ 	<string name="appearance">外觀</string>
+ 	<string name="theme">主題</string>
+ 	<string name="layout">佈局</string>
+-
+-	<string-array name="app_theme">
+-		<item>明亮</item>
+-		<item>黑暗</item>
+-		<item>使用系統默認</item>
+-	</string-array>
+-
+-	<string-array name="layout_type">
+-		<item>列表</item>
+-		<item>網格</item>
+-	</string-array>
++	<string name="theme_light">明亮</string>
++	<string name="theme_dark">黑暗</string>
++	<string name="theme_system">使用系統默認</string>
++	<string name="layout_list">列表</string>
++	<string name="layout_grid">網格</string>
+ </resources>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index dc380b1..e21fd27 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -21,15 +21,9 @@
+     <string name="appearance">Appearance</string>
+     <string name="theme">Theme</string>
+     <string name="layout">Layout</string>
+-
+-    <string-array name="app_theme">
+-        <item>Light</item>
+-        <item>Dark</item>
+-        <item>Use System Default</item>
+-    </string-array>
+-
+-    <string-array name="layout_type">
+-        <item>List</item>
+-        <item>Grid</item>
+-    </string-array>
++    <string name="theme_light">Light</string>
++    <string name="theme_dark">Dark</string>
++    <string name="theme_system">Use System Default</string>
++    <string name="layout_list">List</string>
++    <string name="layout_grid">Grid</string>
+ </resources>
+diff --git a/app/src/main/res/xml/network_security_config.xml b/app/src/main/res/xml/network_security_config.xml
+new file mode 100644
+index 0000000..af26fa3
+--- /dev/null
++++ b/app/src/main/res/xml/network_security_config.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<network-security-config>
++    <domain-config cleartextTrafficPermitted="true">
++        <domain includeSubdomains="true">zeus.dl.playstation.net</domain>
++        <domain includeSubdomains="true">ares.dl.playstation.net</domain>
++    </domain-config>
++</network-security-config>
+diff --git a/build.gradle.kts b/build.gradle.kts
+index 8462ad7..f93f06f 100644
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -1,21 +1,23 @@
+ // Top-level build file where you can add configuration options common to all sub-projects/modules.
+ 
+ buildscript {
+-    val kotlin_version = "1.8.22"
+-
+     repositories {
+         google()
+         mavenCentral()
+     }
+     dependencies {
+-        classpath("com.android.tools.build:gradle:8.0.2")
+-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
++        classpath(libs.gradle)
++        classpath(libs.kotlin.gradle.plugin)
+ 
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+     }
+ }
+ 
++plugins {
++    alias(libs.plugins.compose.compiler) apply false
++}
++
+ allprojects {
+     repositories {
+         google()
+@@ -26,6 +28,6 @@ allprojects {
+ 
+ tasks {
+     register("clean", Delete::class) {
+-        delete(rootProject.buildDir)
++        delete(rootProject.layout.buildDirectory)
+     }
+ }
+diff --git a/gradle.properties b/gradle.properties
+index 4b42278..347075c 100644
+--- a/gradle.properties
++++ b/gradle.properties
+@@ -17,6 +17,5 @@ org.gradle.jvmargs=-Xmx1536m
+ android.useAndroidX=true
+ # Kotlin code style for this project: "official" or "obsolete":
+ kotlin.code.style=official
+-android.defaults.buildfeatures.buildconfig=true
+ android.nonTransitiveRClass=false
+ android.nonFinalResIds=false
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+new file mode 100644
+index 0000000..a2641ba
+--- /dev/null
++++ b/gradle/libs.versions.toml
+@@ -0,0 +1,51 @@
++[versions]
++activityCompose = "1.11.0"
++coil = "2.7.0"
++coilCompose = "2.7.0"
++composeBom = "2025.09.00"
++coreKtx = "1.17.0"
++coreSplashscreen = "1.0.1"
++datastorePreferences = "1.1.7"
++flowreactivenetwork = "1.0.4"
++gradle = "8.12.3"
++kotlinCsv = "cedb7c5ab2"
++kotlin = "2.2.20"
++lifecycleRuntimeKtx = "2.9.3"
++material = "1.13.0"
++material3 = "1.3.2"
++materialIconsExtended = "1.7.8"
++navigationCompose = "2.9.4"
++okio = "3.16.0"
++roomRuntime = "2.8.0"
++rxjava = "1.3.8"
++
++[libraries]
++androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
++androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
++androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
++androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
++androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
++androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
++androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
++androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
++androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
++androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
++androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
++androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
++androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
++androidx-ui = { module = "androidx.compose.ui:ui" }
++androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
++androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
++androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
++coil = { module = "io.coil-kt:coil", version.ref = "coil" }
++coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
++flowreactivenetwork = { module = "ru.beryukhov:flowreactivenetwork", version.ref = "flowreactivenetwork" }
++gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
++kotlin-csv = { module = "com.github.IllusionMan1212:kotlin-csv", version.ref = "kotlinCsv" }
++kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
++material = { module = "com.google.android.material:material", version.ref = "material" }
++okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
++rxjava = { module = "io.reactivex:rxjava", version.ref = "rxjava" }
++
++[plugins]
++compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+index 79160f2..58ed00a 100644
+--- a/gradle/wrapper/gradle-wrapper.properties
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -1,6 +1,6 @@
+ #Wed Jun 21 06:42:34 EEST 2023
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-8.1.1-bin.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists

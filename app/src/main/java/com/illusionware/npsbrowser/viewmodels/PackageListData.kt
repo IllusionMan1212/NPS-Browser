@@ -15,6 +15,7 @@ import com.illusionware.npsbrowser.data.SettingsPreferencesRepository
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItem
 import com.illusionware.npsbrowser.model.PackageItemType
+import com.illusionware.npsbrowser.util.system.prettyByte
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.internal.toLongOrDefault
 import java.io.InputStream
+import androidx.core.net.toUri
+import java.util.Locale.ENGLISH
 
 data class PackageListUiState(
     val packages: ArrayList<PackageItem> = ArrayList(),
@@ -125,7 +128,7 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
 
         val file: InputStream?
         try {
-            file = app.contentResolver.openInputStream(Uri.parse(fileUri))
+            file = app.contentResolver.openInputStream(fileUri.toUri())
         } catch (e: Exception) {
             throw e
         }
@@ -153,10 +156,10 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
             val tempsha256 = row["SHA256"]
             val tempDate = row["Last Modification Date"]
             if (!tempSize.isNullOrEmpty()) {
-                size = bytesIntoHumanReadable(tempSize.toLongOrDefault(0))
+                size = tempSize.toLongOrDefault(0).prettyByte()
             }
             if (!tempFW.isNullOrEmpty()) {
-                minFW = String.format("%.2f", tempFW.toFloat())
+                minFW = String.format(ENGLISH, "%.2f", tempFW.toFloat())
             }
             if (!tempUrl.isNullOrEmpty() && tempUrl != "MISSING") {
                 pkgUrl = tempUrl
@@ -186,6 +189,7 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
                     contentId,
                     modificationDate,
                     size,
+                    tempSize?.toULongOrNull(),
                     sha256,
                     zRif,
                     rap,
@@ -199,27 +203,6 @@ class PackageListViewModel(app: NPSApp, settingsRepo: SettingsPreferencesReposit
         file.close()
 
         return list
-    }
-
-    private fun bytesIntoHumanReadable(bytes: Long): String {
-        val kilobyte: Long = 1024
-        val megabyte = kilobyte * 1024
-        val gigabyte = megabyte * 1024
-        val terabyte = gigabyte * 1024
-
-        return if (bytes in 0 until kilobyte) {
-            "$bytes" + "B"
-        } else if (bytes in kilobyte until megabyte) {
-            String.format("%.2f", (bytes.toDouble() / kilobyte.toDouble())) + "KB"
-        } else if (bytes in megabyte until gigabyte) {
-            String.format("%.2f", (bytes.toDouble() / megabyte.toDouble())) + "MB"
-        } else if (bytes in gigabyte until terabyte) {
-            String.format("%.2f", (bytes.toDouble() / gigabyte.toDouble())) + "GB"
-        } else if (bytes >= terabyte) {
-            String.format("%.2f", (bytes.toDouble() / terabyte.toDouble())) + "TB"
-        } else {
-            "$bytes" + "B"
-        }
     }
 
     companion object {

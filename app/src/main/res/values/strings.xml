@@ -21,15 +21,9 @@
     <string name="appearance">Appearance</string>
     <string name="theme">Theme</string>
     <string name="layout">Layout</string>
-
-    <string-array name="app_theme">
-        <item>Light</item>
-        <item>Dark</item>
-        <item>Use System Default</item>
-    </string-array>
-
-    <string-array name="layout_type">
-        <item>List</item>
-        <item>Grid</item>
-    </string-array>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">Use System Default</string>
+    <string name="layout_list">List</string>
+    <string name="layout_grid">Grid</string>
 </resources>

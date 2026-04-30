@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.illusionware.npsbrowser.data.OnboardingPreferencesRepository
 import com.illusionware.npsbrowser.data.SettingsPreferencesRepository
+import com.illusionware.npsbrowser.data.download.DownloadManager
+import com.illusionware.npsbrowser.data.notification.Notifications
 
 @OptIn(ExperimentalUnsignedTypes::class)
 val HMAC_KEY = ubyteArrayOf(
@@ -22,10 +24,15 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 class NPSApp: Application() {
     lateinit var settingsPreferencesRepository: SettingsPreferencesRepository
     lateinit var onboardingPreferencesRepository: OnboardingPreferencesRepository
+    lateinit var downloadManager: DownloadManager
 
     override fun onCreate() {
         super.onCreate()
         settingsPreferencesRepository = SettingsPreferencesRepository(dataStore)
         onboardingPreferencesRepository = OnboardingPreferencesRepository(dataStore)
+//        downloader = Downloader(this)
+        downloadManager = DownloadManager(this)
+
+        Notifications.initialize(this)
     }
 }

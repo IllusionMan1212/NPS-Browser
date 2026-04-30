@@ -1,0 +1,51 @@
+[versions]
+activityCompose = "1.11.0"
+coil = "2.7.0"
+coilCompose = "2.7.0"
+composeBom = "2025.09.00"
+coreKtx = "1.17.0"
+coreSplashscreen = "1.0.1"
+datastorePreferences = "1.1.7"
+flowreactivenetwork = "1.0.4"
+gradle = "8.12.3"
+kotlinCsv = "cedb7c5ab2"
+kotlin = "2.2.20"
+lifecycleRuntimeKtx = "2.9.3"
+material = "1.13.0"
+material3 = "1.3.2"
+materialIconsExtended = "1.7.8"
+navigationCompose = "2.9.4"
+okio = "3.16.0"
+roomRuntime = "2.8.0"
+rxjava = "1.3.8"
+
+[libraries]
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
+androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
+androidx-ui = { module = "androidx.compose.ui:ui" }
+androidx-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+coil = { module = "io.coil-kt:coil", version.ref = "coil" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+flowreactivenetwork = { module = "ru.beryukhov:flowreactivenetwork", version.ref = "flowreactivenetwork" }
+gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
+kotlin-csv = { module = "com.github.IllusionMan1212:kotlin-csv", version.ref = "kotlinCsv" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+rxjava = { module = "io.reactivex:rxjava", version.ref = "rxjava" }
+
+[plugins]
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

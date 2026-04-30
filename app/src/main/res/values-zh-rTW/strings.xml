@@ -21,15 +21,9 @@
 	<string name="appearance">外觀</string>
 	<string name="theme">主題</string>
 	<string name="layout">佈局</string>
-
-	<string-array name="app_theme">
-		<item>明亮</item>
-		<item>黑暗</item>
-		<item>使用系統默認</item>
-	</string-array>
-
-	<string-array name="layout_type">
-		<item>列表</item>
-		<item>網格</item>
-	</string-array>
+	<string name="theme_light">明亮</string>
+	<string name="theme_dark">黑暗</string>
+	<string name="theme_system">使用系統默認</string>
+	<string name="layout_list">列表</string>
+	<string name="layout_grid">網格</string>
 </resources>

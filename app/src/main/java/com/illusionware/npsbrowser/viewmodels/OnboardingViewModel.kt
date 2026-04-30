@@ -13,6 +13,7 @@ import com.illusionware.npsbrowser.data.OnboardingPreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -28,6 +29,10 @@ class OnboardingViewModel(
                 false,
             )
         )
+
+    suspend fun getOnboardingStatus(): Boolean {
+        return onboardingPreferencesRepository.getPreferences().first().seenOnboarding
+    }
 
     fun finishOnboarding(shouldCreateDefaultDir: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {

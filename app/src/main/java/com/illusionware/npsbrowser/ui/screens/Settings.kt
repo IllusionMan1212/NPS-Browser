@@ -23,9 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Palette
@@ -46,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +68,7 @@ import com.illusionware.npsbrowser.data.Theme
 import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItemType
 
+// TODO: localize this
 private val Themes = hashMapOf(
     Theme.LIGHT.ordinal to "Light",
     Theme.DARK.ordinal to "Dark",
@@ -96,7 +95,7 @@ fun SettingsScreen(
                     .padding(vertical = 8.dp, horizontal = 4.dp),
             ) {
                 NPSIconButton(tooltip = "Go Back", onClick = { navigationGoBack() }) {
-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Go Back" )
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go Back" )
                 }
                 Text(text = stringResource(id = R.string.title_activity_settings), style = Typography.titleLarge)
             }

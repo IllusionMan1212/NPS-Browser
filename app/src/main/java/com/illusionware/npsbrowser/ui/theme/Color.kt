@@ -19,6 +19,7 @@ val ColorOnSecondaryDark = Color(0xDFFFFFFF)
 val ColorAmoledDark = Color(0xFF000000)
 
 // Works on both Dark and Light
+val ColorTag = Color(0xFFEAF654)
 val ColorAccent = Color(0xFF545FBF)
 val ColorError = Color(0xFFF93422)
 

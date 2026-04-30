@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
@@ -45,14 +46,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.illusionware.npsbrowser.R
 import com.illusionware.npsbrowser.ui.theme.ColorAccent
 import com.illusionware.npsbrowser.ui.theme.Typography
@@ -62,6 +64,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -85,6 +88,7 @@ import com.illusionware.npsbrowser.model.ConsoleType
 import com.illusionware.npsbrowser.model.PackageItemType
 import com.illusionware.npsbrowser.viewmodels.OnboardingViewModel
 import com.illusionware.npsbrowser.viewmodels.SettingsViewModel
+import androidx.core.view.WindowCompat
 import kotlinx.coroutines.launch
 
 const val PAGE_COUNT = 3
@@ -111,13 +115,15 @@ fun OnBoarding(
         factory = SettingsViewModel.Factory
     ),
 ) {
-    val systemUiController = rememberSystemUiController()
     val pagerState = rememberPagerState(
         initialPage = 0,
         initialPageOffsetFraction = 0f
-    )
+    ) {
+        PAGE_COUNT
+    }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val view = LocalView.current
     val settingsPrefs = settingsViewModel.uiState.collectAsStateWithLifecycle().value
 
     val darkIcons = when (pagerState.currentPage) {
@@ -125,23 +131,22 @@ fun OnBoarding(
         else -> true
     }
 
-    DisposableEffect(systemUiController) {
-        systemUiController.setStatusBarColor(
-            color = Color.Transparent,
-            darkIcons = darkIcons && !darkTheme
-        )
+    DisposableEffect(view, darkIcons, darkTheme) {
         val activity = context as Activity
+        val window = activity.window
+        val insetsController = WindowCompat.getInsetsController(window, view)
+
+        window.statusBarColor = Color.Transparent.toArgb()
+        insetsController.isAppearanceLightStatusBars = darkIcons && !darkTheme
+
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         onDispose {
-            systemUiController.setStatusBarColor(
-                color = Color.Transparent,
-                darkIcons = !darkTheme
-            )
+            insetsController.isAppearanceLightStatusBars = !darkTheme
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
-    HorizontalPager(pageCount = PAGE_COUNT, state = pagerState) { page ->
+    HorizontalPager(state = pagerState) { page ->
         when (page) {
             0 -> OnBoardingInitial(
                 incrementPage = {
@@ -782,7 +787,19 @@ fun Toggleable(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Un
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(text = title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1.0f))
-            Switch(checked = checked, onCheckedChange = null)
+            Switch(
+                checked = checked,
+                onCheckedChange = null,
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                } else null
+            )
         }
     }
 }
